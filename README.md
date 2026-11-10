@@ -1,7 +1,7 @@
 ## Sprint 1 — 10/11 a 13/11/2026
 
-- [ ] [S1-01] Validar a proposta e fechar o escopo do projeto
-- [ ] [S1-02] Configurar o backend em Django REST Framework
+- [x] [S1-01] Validar a proposta e fechar o escopo do projeto
+- [x] [S1-02] Configurar o backend em Django REST Framework
 - [ ] [S1-03] Implementar cadastro e autenticação
 - [ ] [S1-04] Implementar perfil e preferências de viagem no backend
 - [ ] [S1-05] Implementar e testar as permissões dos dados pessoais
