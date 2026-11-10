@@ -17,3 +17,8 @@ media/
 
 # Arquivos estáticos coletados
 staticfiles/
+
+# Frontend
+node_modules/
+dist/
+coverage/
