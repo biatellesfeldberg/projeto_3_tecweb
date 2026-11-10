@@ -51,3 +51,44 @@
 - [ ] [S2-22] Atualizar e verificar o deploy final
 - [ ] [S2-23] Finalizar a documentação do projeto
 - [ ] [S2-24] Encerrar o quadro e conferir os requisitos da entrega
+
+## Executar o backend localmente
+
+Na primeira execução:
+
+```bash
+cd backend
+
+python3 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install -r requirements.txt
+```
+
+No Windows, ative o ambiente com:
+
+```powershell
+.venv\Scripts\activate
+```
+
+Copie `.env.example` para `.env` e configure uma chave própria em
+`DJANGO_SECRET_KEY`. Para gerar a chave:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Depois, execute:
+
+```bash
+python manage.py migrate
+python manage.py runserver
+```
+
+API: http://127.0.0.1:8000/api/health/
+
+Para criar uma conta administrativa:
+
+```bash
+python manage.py createsuperuser
+```
