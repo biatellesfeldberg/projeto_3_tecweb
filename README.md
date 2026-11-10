@@ -1,12 +1,12 @@
 ## Sprint 1 — 10/11 a 13/11/2026
 
-- [x] [S1-01] Validar a proposta e fechar o escopo do projeto
+- [x] [S1-01] Fluxo de telas e tasklist
 - [x] [S1-02] Configurar o backend em Django REST Framework
-- [ ] [S1-03] Implementar cadastro e autenticação
+- [x] [S1-03] Implementar cadastro e autenticação
 - [ ] [S1-04] Implementar perfil e preferências de viagem no backend
 - [ ] [S1-05] Implementar e testar as permissões dos dados pessoais
 - [ ] [S1-06] Conferir autenticação na primeira versão publicada
-- [ ] [S1-07] Configurar React, Tailwind e a navegação principal
+- [x] [S1-07] Configurar React e a navegação principal
 - [ ] [S1-08] Desenvolver as telas de cadastro e login
 - [ ] [S1-09] Desenvolver a tela de perfil e preferências
 - [ ] [S1-10] Desenvolver Minhas viagens e o formulário de planejamento
@@ -18,7 +18,7 @@
 - [ ] [S1-16] Gerar e salvar roteiros personalizados
 - [ ] [S1-17] Testar falhas e consistência da geração de roteiros
 - [ ] [S1-18] Definir os contratos entre frontend e backend
-- [ ] [S1-19] Organizar repositório, quadro e cronograma inicial
+- [x] [S1-19] Organizar repositório, quadro e cronograma inicial
 - [ ] [S1-20] Implementar os endpoints de lugares salvos
 - [ ] [S1-21] Desenvolver Meus lugares e a seleção para viagens
 - [ ] [S1-22] Desenvolver o roteiro diário com edição e mapa
