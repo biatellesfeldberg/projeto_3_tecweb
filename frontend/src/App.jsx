@@ -11,6 +11,7 @@ import {
 
 import Header from "./components/Header";
 import AuthPage from "./pages/AuthPage";
+import ProfilePage from "./pages/ProfilePage";
 
 const routes = [
   { path: "/viagens", title: "Minhas viagens" },
@@ -111,6 +112,8 @@ export default function App() {
                   key="register"
                   mode="register"
                 />
+              ) : route.path === "/conta" ? (
+                <ProfilePage />
               ) : (
                 <></>
               )

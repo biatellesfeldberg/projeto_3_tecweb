@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -85,6 +86,64 @@ export function AuthProvider({ children }) {
     return () => controller.abort();
   }, []);
 
+  const accountRequest = useCallback(
+    async (path, options = {}) => {
+      if (!tokenRef.current) {
+        throw new AuthError(
+          "Entre novamente para acessar seu perfil.",
+          {},
+          401,
+        );
+      }
+
+      const currentRevision = revision.current;
+
+      try {
+        const result = await authRequest(path, {
+          ...options,
+          token: tokenRef.current,
+        });
+
+        if (
+          options.signal?.aborted ||
+          currentRevision !== revision.current
+        ) {
+          throw new DOMException(
+            "Requisição cancelada.",
+            "AbortError",
+          );
+        }
+
+        if (
+          options.responseType !== "blob" &&
+          result.id
+        ) {
+          setUser(result);
+        }
+
+        return result;
+      } catch (error) {
+        if (
+          error.status === 401 &&
+          currentRevision === revision.current
+        ) {
+          revision.current += 1;
+          tokenRef.current = null;
+
+          saveToken(null);
+          setUser(null);
+
+          setSessionError(
+            "Sua sessão não é mais válida. Entre novamente.",
+          );
+        }
+
+        throw error;
+      }
+    },
+    [],
+  );
+
   async function authenticate(path, data, signal) {
     const result = await authRequest(path, {
       method: "POST",
@@ -143,6 +202,7 @@ export function AuthProvider({ children }) {
         user,
         isRestoring,
         sessionError,
+        accountRequest,
 
         login: (data, signal) =>
           authenticate("login", data, signal),

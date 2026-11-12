@@ -16,8 +16,7 @@ export function saveToken(token) {
       sessionStorage.removeItem(TOKEN_KEY);
     }
   } catch {
-    // A sessão atual continua em memória se o navegador
-    // bloquear o armazenamento.
+    // A sessão atual continua em memória.
   }
 }
 
@@ -29,10 +28,28 @@ export class AuthError extends Error {
   }
 }
 
+function formatMessages(value) {
+  if (value && typeof value === "object") {
+    return Object.values(value)
+      .map(formatMessages)
+      .join(" ");
+  }
+
+  return String(value);
+}
+
 export async function authRequest(
   path,
-  { method = "GET", data, token, signal } = {},
+  {
+    method = "GET",
+    data,
+    token,
+    signal,
+    responseType = "json",
+  } = {},
 ) {
+  const multipart = data instanceof FormData;
+
   let response;
 
   try {
@@ -41,9 +58,12 @@ export async function authRequest(
       signal,
 
       headers: {
-        Accept: "application/json",
+        Accept:
+          responseType === "blob"
+            ? "*/*"
+            : "application/json",
 
-        ...(data
+        ...(data && !multipart
           ? { "Content-Type": "application/json" }
           : {}),
 
@@ -53,7 +73,11 @@ export async function authRequest(
       },
 
       ...(data
-        ? { body: JSON.stringify(data) }
+        ? {
+            body: multipart
+              ? data
+              : JSON.stringify(data),
+          }
         : {}),
     });
   } catch (error) {
@@ -66,6 +90,19 @@ export async function authRequest(
     );
   }
 
+  if (response.ok && responseType === "blob") {
+    const contentType =
+      response.headers.get("Content-Type");
+
+    if (!contentType?.startsWith("image/")) {
+      throw new AuthError(
+        "Não foi possível carregar a foto.",
+      );
+    }
+
+    return response.blob();
+  }
+
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
@@ -73,9 +110,7 @@ export async function authRequest(
 
     if (body && typeof body === "object") {
       for (const [key, value] of Object.entries(body)) {
-        fields[key] = Array.isArray(value)
-          ? value.join(" ")
-          : String(value);
+        fields[key] = formatMessages(value);
       }
     }
 
