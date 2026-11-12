@@ -6,14 +6,19 @@ from rest_framework.decorators import (
     api_view,
     authentication_classes,
     permission_classes,
+    parser_classes,
 )
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from .serializers import (
     LoginSerializer,
     RegisterSerializer,
     UserSerializer,
+    ProfileSerializer,
+    ProfileUpdateSerializer,
+    ProfilePhotoSerializer,
 )
 
 
@@ -89,9 +94,54 @@ def logout(request):
     })
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticated])
 def me(request):
+    if request.method == "PATCH":
+        serializer = ProfileUpdateSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
     return Response(
-        UserSerializer(request.user).data,
+        ProfileSerializer(
+            request.user,
+            context={"request": request},
+        ).data
+    )
+
+@api_view(["PATCH", "DELETE"])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def profile_photo(request):
+    user = request.user
+
+    if request.method == "DELETE":
+        if user.photo:
+            user.photo.delete(save=True)
+
+    else:
+        serializer = ProfilePhotoSerializer(
+            user,
+            data=request.data,
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        old_photo = user.photo.name
+
+        serializer.save()
+
+        if old_photo and old_photo != user.photo.name:
+            user.photo.storage.delete(old_photo)
+
+    return Response(
+        ProfileSerializer(
+            user,
+            context={"request": request},
+        ).data
     )

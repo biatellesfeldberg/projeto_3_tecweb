@@ -24,4 +24,9 @@ urlpatterns = [
         views.me,
         name="me",
     ),
+    path(
+        "me/photo/",
+        views.profile_photo,
+        name="profile-photo",
+    ),
 ]

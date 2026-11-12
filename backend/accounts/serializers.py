@@ -110,3 +110,96 @@ class LoginSerializer(serializers.Serializer):
         write_only=True,
         trim_whitespace=False,
     )
+
+class ProfileSerializer(serializers.ModelSerializer):
+    photo = serializers.ImageField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "bio",
+            "home_city",
+            "photo",
+            "preferred_destinations",
+            "interests",
+            "style",
+            "pace",
+            "destination_preference",
+        ]
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(
+        max_length=150,
+        required=False,
+    )
+
+    preferred_destinations = serializers.ListField(
+        child=serializers.CharField(max_length=120),
+        max_length=20,
+        required=False,
+    )
+
+    interests = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=User.Interest.choices,
+        ),
+        max_length=20,
+        required=False,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "bio",
+            "home_city",
+            "preferred_destinations",
+            "interests",
+            "style",
+            "pace",
+            "destination_preference",
+        ]
+
+    def validate(self, attrs):
+        unknown_fields = set(self.initial_data) - set(self.fields)
+
+        if unknown_fields:
+            raise serializers.ValidationError({
+                field: ["Campo não permitido nesta atualização."]
+                for field in sorted(unknown_fields)
+            })
+
+        return attrs
+
+    def validate_preferred_destinations(self, value):
+        return list(dict.fromkeys(value))
+
+    def validate_interests(self, value):
+        return list(dict.fromkeys(value))
+
+
+class ProfilePhotoSerializer(serializers.ModelSerializer):
+    photo = serializers.ImageField(required=True)
+
+    class Meta:
+        model = User
+        fields = ["photo"]
+
+    def validate_photo(self, value):
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError(
+                "A foto deve ter no máximo 5 MB."
+            )
+
+        if value.image.format not in {"JPEG", "PNG", "WEBP"}:
+            raise serializers.ValidationError(
+                "Envie uma imagem JPEG, PNG ou WebP."
+            )
+
+        return value
