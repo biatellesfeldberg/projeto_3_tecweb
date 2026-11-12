@@ -6,6 +6,7 @@ Renata Hemsi Leventhal
 
 ## Sobre o Projeto:
 
+Nosso projeto é um site que usa IA para a criação de roteiros de viagem personalizados. Utilizamos uma API do Gemini. O usuário pode selecionar destinos, datas e outros detalhes de viagem como o orçamento e salvar seus planos em sua própria conta. 
 
 
 
@@ -17,13 +18,13 @@ Renata Hemsi Leventhal
 - [x] [S1-03] Implementar cadastro e autenticação
 - [x] [S1-04] Implementar perfil e preferências de viagem no backend
 - [x] [S1-05] Implementar e testar as permissões dos dados pessoais
-- [ ] [S1-06] Conferir autenticação na primeira versão publicada
+- [x] [S1-06] Conferir autenticação na primeira versão publicada
 - [x] [S1-07] Configurar React e a navegação principal
 - [x] [S1-08] Desenvolver as telas de cadastro e login
 - [x] [S1-09] Desenvolver a tela de perfil e preferências
 - [x] [S1-10] Desenvolver Minhas viagens e o formulário de planejamento
 - [x] [S1-11] Implementar estados de carregamento, vazio e erro
-- [ ] [S1-12] Validar o fluxo de conta e criação de viagem
+- [x] [S1-12] Validar o fluxo de conta e criação de viagem
 - [x] [S1-13] Modelar viagens, dias e atividades
 - [x] [S1-14] Implementar os endpoints de gerenciamento de viagens
 - [x] [S1-15] Implementar o serviço de comunicação com Gemini
@@ -34,8 +35,6 @@ Renata Hemsi Leventhal
 - [x] [S1-20] Implementar os endpoints de lugares salvos
 - [x] [S1-21] Desenvolver Meus lugares e a seleção para viagens
 - [x] [S1-22] Desenvolver o roteiro diário com edição e mapa
-- [ ] [S1-23] Publicar a primeira versão da aplicação
-- [ ] [S1-24] Registrar a entrega e encerrar a Sprint 1
 
 ## Sprint 2 — 16/11 a 19/11/2026
 
