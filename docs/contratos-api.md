@@ -263,7 +263,7 @@ Resposta `200`: perfil completo, com `"photo": null`.
 
 ---
 
-## Viagens 🛠️ (issue S1-14)
+## Viagens ✅ (issue S1-14)
 
 Base: `/api/trips/`. Cada usuário só vê e altera as **próprias** viagens.
 
@@ -296,7 +296,7 @@ Base: `/api/trips/`. Cada usuário só vê e altera as **próprias** viagens.
 | `description` | texto | não | Só no detalhe |
 | `origin` | texto (até 120) | sim | "Cidade de origem" |
 | `destination` | texto (até 120) | não | `""` = "Ainda não escolhi meu destino" |
-| `start_date` / `end_date` | data | sim | `end_date` ≥ `start_date` |
+| `start_date` / `end_date` | data | sim | `end_date` ≥ `start_date`. Máximo de 60 dias de viagem |
 | `duration_days` | número | (somente leitura) | Calculado: dias entre as datas, incluindo o primeiro e o último |
 | `travelers_count` | número 1–50 | não (padrão `1`) | |
 | `budget` | texto decimal ou `null` | não | Orçamento total |
@@ -376,6 +376,7 @@ O mesmo do resumo, mais `description`, `style`, `pace`, `transport`,
 ### `GET /api/trips/`: listar minhas viagens
 
 Filtro opcional: `?status=planning`, `?status=upcoming` ou `?status=completed`.
+Um status inválido retorna `400`: `{"status": ["\"qualquer\" não é uma escolha válida."]}`.
 
 Resposta `200`: lista de `Trip` (resumo), ordenada por `start_date`.
 
@@ -413,10 +414,21 @@ Resposta `201`: `TripDetail`. O backend **cria automaticamente um dia
 (`days`) para cada data** entre `start_date` e `end_date`, todos ainda sem
 atividades.
 
-Erro `400` (exemplo):
+O dono da viagem é sempre o usuário logado. Um campo `owner` enviado no corpo é
+ignorado.
+
+Erros `400` (exemplos):
 
 ```json
 { "end_date": ["A data de término deve ser igual ou posterior à data de início."] }
+```
+
+```json
+{ "end_date": ["A viagem pode ter no máximo 60 dias."] }
+```
+
+```json
+{ "interests": {"0": ["\"praia\" não é uma escolha válida."]} }
 ```
 
 ### `GET /api/trips/{id}/`: detalhe da viagem
@@ -434,14 +446,33 @@ Se as datas mudarem, os dias são ajustados: datas novas ganham dias vazios, e
 dias fora do novo período são **removidos junto com suas atividades**. Avise o
 usuário antes de encurtar uma viagem.
 
+### Atualizar a situação da viagem
+
+A situação (`status`) é alterada pelo mesmo `PATCH`:
+
+```json
+{ "status": "upcoming" }
+```
+
+Resposta `200`: `TripDetail`. Valores aceitos: `planning`, `upcoming` e
+`completed` (veja [Status da viagem](#status-da-viagem-status)).
+
 ### `DELETE /api/trips/{id}/`: excluir viagem
 
 Resposta `204` (sem corpo). Os dias e as atividades da viagem também são
 apagados.
 
+### `POST /api/trips/{id}/duplicate/`: duplicar viagem
+
+Sem corpo. Cria uma cópia da viagem com os mesmos dados, dias (com título e
+notas) e atividades. A cópia recebe o título com ` (cópia)` no final (ex.:
+`"Lisboa com calma (cópia)"`) e volta para o status `planning`.
+
+Resposta `201`: `TripDetail` da **nova** viagem. A viagem original não muda.
+
 ---
 
-## Dias e atividades 🛠️ (issue S1-14)
+## Dias e atividades ✅ (issue S1-14)
 
 ### `PATCH /api/trips/{trip_id}/days/{day_id}/`: editar o dia ("Notas do dia")
 
@@ -482,7 +513,8 @@ Erros `400`: `{"day": ["Este dia não pertence a esta viagem."]}`,
 ### `PATCH /api/trips/{trip_id}/activities/{activity_id}/`: editar atividade
 
 Envie só os campos alterados. Para **mover a atividade para outro dia**, envie
-um novo `day`.
+um novo `day`. Se `order` não for enviado junto, ela vai para o final do novo
+dia.
 
 Resposta `200`: a atividade atualizada. `total_cost` é recalculado.
 
@@ -498,6 +530,11 @@ Resposta `204`.
 
 A lista precisa conter **todas** as atividades daquele dia. Resposta `200`: o
 dia com as atividades na nova ordem.
+
+Erro `400`: `{"activity_ids": ["Envie todas as atividades deste dia, sem repetir."]}`.
+
+Em todas as rotas de dias e atividades, uma viagem, um dia ou uma atividade
+inexistente ou de outra pessoa retorna `404`.
 
 ---
 
@@ -695,22 +732,28 @@ Para o frontend não precisar esperar o backend, existem:
   contrato, com os mesmos dados do fluxo de telas ("Lisboa com calma", "Fim de
   semana no Rio" e "Férias em grupo").
 - `frontend/src/services/trips.js`: funções prontas (`listTrips`,
-  `getTrip`, `createTrip`, `updateTrip`, `deleteTrip`, `updateDay`,
-  `createActivity`, `updateActivity`, `deleteActivity`, `reorderActivities`,
-  `generateItinerary`). Elas devolvem os dados simulados ou chamam a API de
-  verdade, dependendo da constante `USE_MOCKS`.
+  `getTrip`, `createTrip`, `updateTrip`, `deleteTrip`, `duplicateTrip`,
+  `updateDay`, `createActivity`, `updateActivity`, `deleteActivity`,
+  `reorderActivities`, `generateItinerary`). Elas devolvem os dados simulados
+  ou chamam a API de verdade, dependendo da constante `USE_MOCKS`.
 
-**Por enquanto, os dados simulados vêm ligados por padrão.** Nenhuma
-requisição de viagens é feita: os dados ficam só na memória do navegador e
-voltam ao original quando a página é recarregada.
+**Os endpoints de viagens (S1-14) já estão prontos, então `USE_MOCKS` agora é
+`false` por padrão** e as funções chamam a API de verdade. Para isso, o
+backend precisa estar rodando (`python manage.py runserver`).
 
-Quando os endpoints de viagens (S1-14) estiverem prontos, o padrão de
-`USE_MOCKS` em `services/trips.js` passa a ser `false`. As telas não precisam
-mudar. Para testar a API de verdade antes disso, rode o frontend com:
+A exceção é `generateItinerary`: o endpoint de geração de roteiro (S1-16)
+ainda não existe, então, com a API de verdade, essa função retorna erro. Para
+testar a tela de geração antes disso, use os dados simulados.
+
+Para voltar a usar só dados simulados (por exemplo, sem o backend rodando),
+inicie o frontend com:
 
 ```bash
-VITE_USE_MOCKS=false npm run dev
+VITE_USE_MOCKS=true npm run dev
 ```
+
+Nesse modo, nenhuma requisição de viagens é feita: os dados ficam só na
+memória do navegador e voltam ao original quando a página é recarregada.
 
 Os erros seguem o mesmo padrão de `services/auth.js`: as funções lançam
 `ApiError`, com `message`, `fields` (erros por campo) e `status`.
@@ -740,9 +783,12 @@ As fotos não são mais disponibilizadas diretamente por `/media/`.
 
 ### Implementação dos endpoints de viagens
 
-Os endpoints da S1-14 deverão utilizar as funções de
-`backend/trips/permissions.py` para recuperar viagens, dias e atividades
-autorizados antes de consultar ou modificar seus dados.
+Os endpoints da S1-14 utilizam as funções de `backend/trips/permissions.py`
+para recuperar viagens, dias e atividades autorizados antes de consultar ou
+modificar seus dados.
 
-Os testes de permissões HTTP deverão ser ampliados quando esses
-endpoints forem implementados.
+Os testes HTTP de permissões entre usuários estão em
+`backend/trips/test_api.py` (classe `TripPrivacyTests`): leitura, edição,
+exclusão e duplicação de viagens de outra pessoa, acesso a dias e atividades
+alheios (inclusive por meio da URL da própria viagem) e tentativa de criar ou
+mover uma atividade para o dia de outra viagem.

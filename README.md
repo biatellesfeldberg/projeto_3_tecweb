@@ -25,7 +25,7 @@ Renata Hemsi Leventhal
 - [ ] [S1-11] Implementar estados de carregamento, vazio e erro
 - [ ] [S1-12] Validar o fluxo de conta e criação de viagem
 - [x] [S1-13] Modelar viagens, dias e atividades
-- [ ] [S1-14] Implementar os endpoints de gerenciamento de viagens
+- [x] [S1-14] Implementar os endpoints de gerenciamento de viagens
 - [x] [S1-15] Implementar o serviço de comunicação com Gemini
 - [ ] [S1-16] Gerar e salvar roteiros personalizados
 - [ ] [S1-17] Testar falhas e consistência da geração de roteiros

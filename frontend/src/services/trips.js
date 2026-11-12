@@ -1,9 +1,9 @@
 // Funções de acesso às viagens, dias, atividades e geração de roteiro.
 // O formato de todos os dados está em docs/contratos-api.md.
 //
-// Enquanto os endpoints de viagens não estão prontos, as funções usam dados
-// simulados (mocks/trips.js). Para usar a API de verdade:
-//   VITE_USE_MOCKS=false npm run dev
+// Por padrão, as funções chamam a API de verdade (o backend precisa estar
+// rodando). Para usar só dados simulados (mocks/trips.js):
+//   VITE_USE_MOCKS=true npm run dev
 
 import { getToken } from "./auth";
 import {
@@ -11,7 +11,7 @@ import {
   mockTrips,
 } from "../mocks/trips";
 
-export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
+export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === "true";
 
 export class ApiError extends Error {
   constructor(message, fields = {}, status = 0) {
@@ -49,6 +49,12 @@ export function updateTrip(tripId, data) {
 export function deleteTrip(tripId) {
   if (USE_MOCKS) return mock.deleteTrip(tripId);
   return apiRequest(`trips/${tripId}/`, { method: "DELETE" });
+}
+
+// Cria uma cópia da viagem (dias e atividades incluídos) e devolve a nova.
+export function duplicateTrip(tripId) {
+  if (USE_MOCKS) return mock.duplicateTrip(tripId);
+  return apiRequest(`trips/${tripId}/duplicate/`, { method: "POST" });
 }
 
 export function updateDay(tripId, dayId, data) {
@@ -335,6 +341,28 @@ const mock = {
     findTrip(tripId);
     db.trips = db.trips.filter((trip) => trip.id !== Number(tripId));
     return null;
+  },
+
+  async duplicateTrip(tripId) {
+    await wait();
+    const original = findTrip(tripId);
+    const trip = copy(original);
+
+    trip.id = db.nextId++;
+    trip.title = `${original.title.slice(0, 120 - 8)} (cópia)`;
+    trip.status = "planning";
+    trip.created_at = now();
+    trip.updated_at = now();
+    trip.days.forEach((day) => {
+      day.id = db.nextId++;
+      day.activities.forEach((activity) => {
+        activity.id = db.nextId++;
+        activity.day = day.id;
+      });
+    });
+
+    db.trips.push(trip);
+    return copy(trip);
   },
 
   async updateDay(tripId, dayId, data) {

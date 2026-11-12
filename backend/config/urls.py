@@ -10,4 +10,6 @@ urlpatterns = [
     path("api/", include("core.urls")),
 
     path("api/", include("places.urls")),
+
+    path("api/", include("trips.urls")),
 ]
