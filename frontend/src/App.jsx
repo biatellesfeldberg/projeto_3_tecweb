@@ -14,6 +14,7 @@ import AuthPage from "./pages/AuthPage";
 import ProfilePage from "./pages/ProfilePage";
 import TripsPage from "./pages/TripsPage";
 import NewTripPage from "./pages/NewTripPage";
+import PlacesPage from "./pages/PlacesPage";
 
 const routes = [
   { path: "/viagens", title: "Minhas viagens" },
@@ -122,6 +123,8 @@ export default function App() {
                 />
               ) : route.path === "/conta" ? (
                 <ProfilePage />
+              ) : route.path === "/lugares" ? (
+                <PlacesPage />
               ) : (
                 <></>
               )

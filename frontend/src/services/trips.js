@@ -250,7 +250,8 @@ export function suggestDestinations(
 // Requisições reais à API
 // ---------------------------------------------------------------------------
 
-async function apiRequest(
+// Também usada por services/places.js.
+export async function apiRequest(
   path,
   {
     method = "GET",
