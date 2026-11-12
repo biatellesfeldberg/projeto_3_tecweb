@@ -1,8 +1,8 @@
 # Contratos da API — Rumo
 
 Este documento define como o frontend (React) e o backend (Django REST
-Framework) conversam. Ele vale para **conta**, **viagens** e **geração de
-roteiro**.
+Framework) conversam. Ele vale para **conta**, **viagens**, **geração de
+roteiro** e **lugares salvos**.
 
 - Endpoints marcados com ✅ já estão implementados.
 - Endpoints marcados com 🛠️ ainda serão implementados, mas **devem seguir
@@ -541,6 +541,139 @@ Erros:
 
 Se a geração falhar, **o roteiro anterior é mantido**, sem nenhuma alteração
 parcial.
+
+---
+
+## Lugares salvos ✅ (issue S1-20)
+
+Base: `/api/places/`. É a coleção "Meus lugares": uma lista de desejos do
+usuário que existe independentemente das viagens. Um lugar pode ser vinculado
+a uma ou mais viagens, e aparece na aba **Lugares** de cada uma. Cada usuário
+só vê e altera os **próprios** lugares.
+
+### Objeto `Place`
+
+```json
+{
+  "id": 7,
+  "name": "Um café em Alfama",
+  "city": "Lisboa",
+  "country": "Portugal",
+  "category": "gastronomy",
+  "description": "Café pequeno com vista para o Tejo.",
+  "notes": "Indicação da Ana. Ir no fim da tarde.",
+  "address": "Largo das Portas do Sol, Lisboa",
+  "latitude": "38.712400",
+  "longitude": "-9.130000",
+  "image_url": "https://images.exemplo.com/alfama.jpg",
+  "trips": [
+    { "id": 12, "title": "Lisboa com calma" }
+  ],
+  "created_at": "2026-11-12T10:15:00-03:00",
+  "updated_at": "2026-11-12T10:15:00-03:00"
+}
+```
+
+| Campo | Tipo | Obrigatório ao criar | Observação |
+|---|---|---|---|
+| `id` | número | (somente leitura) | |
+| `name` | texto (até 150) | sim | |
+| `city` | texto (até 120) | não | Usado nos filtros por cidade |
+| `country` | texto (até 120) | não | |
+| `category` | choice | não (padrão `"other"`) | Mesmas chaves da [categoria da atividade](#categoria-da-atividade-category), para o lugar poder virar atividade no roteiro |
+| `description` | texto | não | |
+| `notes` | texto | não | Observações pessoais |
+| `address` | texto (até 255) | não | |
+| `latitude` / `longitude` | texto decimal ou `null` | não | **Vêm juntas ou as duas `null`**. Aceitam número ou texto; mais de 6 casas decimais são arredondadas. Latitude entre -90 e 90, longitude entre -180 e 180 |
+| `image_url` | URL ou `""` | não | |
+| `trips` | lista de `{id, title}` | (somente leitura) | Viagens às quais o lugar está vinculado, em ordem de data. Lista vazia = "Ainda sem viagem" |
+| `trip_ids` | lista de ids | não (somente escrita) | Vincula o lugar a essas viagens. No `PATCH`, **substitui** os vínculos atuais (`[]` desvincula de todas) |
+| `created_at`, `updated_at` | data e hora | (somente leitura) | |
+
+### `GET /api/places/`: listar meus lugares
+
+Resposta `200`: lista de `Place`, do mais recente para o mais antigo. Sem
+lugares, a resposta é `[]`.
+
+Filtros opcionais (podem ser combinados):
+
+| Parâmetro | Exemplo | Efeito |
+|---|---|---|
+| `search` | `?search=lisboa` | Busca (sem diferenciar maiúsculas) em nome, cidade, país, endereço, descrição e observações |
+| `category` | `?category=gastronomy` | Só a categoria indicada. Chave inválida retorna `400` |
+| `city` | `?city=Lisboa` | Cidade exata (sem diferenciar maiúsculas) |
+| `trip` | `?trip=12` | Só os lugares vinculados à viagem 12 |
+| `trip` | `?trip=none` | Só os lugares sem nenhuma viagem |
+
+### `POST /api/places/`: cadastrar lugar
+
+Requisição (só `name` é obrigatório):
+
+```json
+{
+  "name": "Palácio da Pena",
+  "city": "Sintra",
+  "country": "Portugal",
+  "category": "culture",
+  "notes": "Comprar ingresso antes.",
+  "latitude": "38.787600",
+  "longitude": "-9.390400",
+  "trip_ids": [12]
+}
+```
+
+Resposta `201`: o `Place` criado.
+
+Erros `400`: `{"name": ["Este campo pode não estar em branco."]}`,
+`{"latitude": ["Informe a latitude e a longitude juntas, ou deixe as duas vazias."]}`,
+`{"trip_ids": ["Viagem não encontrada."]}` (viagem inexistente ou de outra
+pessoa).
+
+### `GET /api/places/{id}/`: detalhe do lugar
+
+Resposta `200`: `Place`. Se o lugar não existir ou for de outra pessoa,
+retorna `404`.
+
+### `PATCH /api/places/{id}/`: editar lugar
+
+Envie só os campos que mudaram (os mesmos aceitos no cadastro).
+
+Resposta `200`: o `Place` atualizado.
+
+### `DELETE /api/places/{id}/`: remover lugar
+
+Resposta `204`. O lugar sai também de todas as viagens. As viagens e as
+atividades do roteiro **não** são alteradas.
+
+### Lugares de uma viagem (aba "Lugares")
+
+#### `GET /api/trips/{trip_id}/places/`: listar lugares da viagem
+
+Resposta `200`: lista de `Place`, na ordem em que foram adicionados à viagem.
+
+#### `POST /api/trips/{trip_id}/places/`: adicionar lugares à viagem
+
+Usado no botão "Adicionar à viagem" de Meus lugares, com vários lugares
+selecionados de uma vez.
+
+```json
+{ "place_ids": [7, 9] }
+```
+
+Resposta `200`: a lista **completa** de lugares da viagem (mesmo formato do
+`GET`). Lugares que já estavam na viagem são ignorados, sem erro.
+
+Erros: `400` `{"place_ids": ["Lugar não encontrado."]}` (lugar inexistente ou
+de outra pessoa; nesse caso nenhum lugar é adicionado) ou
+`{"place_ids": ["Esta lista pode não estar vazia."]}`.
+
+#### `DELETE /api/trips/{trip_id}/places/{place_id}/`: tirar lugar da viagem
+
+Resposta `204`. O lugar continua em Meus lugares. Se o lugar não estiver na
+viagem, retorna `404`.
+
+Em todas as rotas de lugares da viagem, uma viagem inexistente ou de outra
+pessoa retorna `404`.
 
 ---
 

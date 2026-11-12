@@ -31,7 +31,7 @@ Renata Hemsi Leventhal
 - [ ] [S1-17] Testar falhas e consistência da geração de roteiros
 - [x] [S1-18] Definir os contratos entre frontend e backend
 - [x] [S1-19] Organizar repositório, quadro e cronograma inicial
-- [ ] [S1-20] Implementar os endpoints de lugares salvos
+- [x] [S1-20] Implementar os endpoints de lugares salvos
 - [ ] [S1-21] Desenvolver Meus lugares e a seleção para viagens
 - [ ] [S1-22] Desenvolver o roteiro diário com edição e mapa
 - [ ] [S1-23] Publicar a primeira versão da aplicação
@@ -66,8 +66,8 @@ Renata Hemsi Leventhal
 
 ## Contratos da API
 
-Os endpoints, campos e exemplos de resposta de **conta**, **viagens** e
-**geração de roteiro** estão documentados em
+Os endpoints, campos e exemplos de resposta de **conta**, **viagens**,
+**geração de roteiro** e **lugares salvos** estão documentados em
 [`docs/contratos-api.md`](docs/contratos-api.md). Qualquer mudança na API deve
 atualizar esse arquivo no mesmo commit.
 

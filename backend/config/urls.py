@@ -10,6 +10,8 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
 
     path("api/", include("core.urls")),
+
+    path("api/", include("places.urls")),
 ]
 
 if settings.DEBUG:
