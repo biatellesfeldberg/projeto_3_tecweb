@@ -89,6 +89,18 @@ class Trip(models.Model):
 
     cover_image_url = models.URLField("imagem de capa", blank=True)
 
+    # Preenchidos pela geração de roteiro com IA (trips/itinerary.py).
+    ai_summary = models.TextField("resumo do roteiro", blank=True)
+    lodging_suggestions = models.JSONField(
+        "sugestões de hospedagem", default=list, blank=True
+    )
+    cost_estimate = models.JSONField(
+        "estimativa de custos", default=dict, blank=True
+    )
+    itinerary_generated_at = models.DateTimeField(
+        "roteiro gerado em", null=True, blank=True
+    )
+
     created_at = models.DateTimeField("criado em", auto_now_add=True)
     updated_at = models.DateTimeField("atualizado em", auto_now=True)
 

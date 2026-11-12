@@ -312,7 +312,8 @@ Base: `/api/trips/`. Cada usuário só vê e altera as **próprias** viagens.
 ### Objeto `TripDetail` (detalhe)
 
 O mesmo do resumo, mais `description`, `style`, `pace`, `transport`,
-`interests` e `days`:
+`interests`, os campos preenchidos pela IA (`ai_summary`,
+`lodging_suggestions`, `cost_estimate`, `itinerary_generated_at`) e `days`:
 
 ```json
 {
@@ -336,6 +337,30 @@ O mesmo do resumo, mais `description`, `style`, `pace`, `transport`,
   "cover_image_url": "https://images.exemplo.com/lisboa.jpg",
   "created_at": "2026-11-10T14:20:00-03:00",
   "updated_at": "2026-11-12T09:05:00-03:00",
+  "ai_summary": "Lisboa sem pressa, entre cultura, miradouros e boa comida.",
+  "lodging_suggestions": [
+    {
+      "name": "Hotel Lisboa Centro",
+      "area": "Baixa",
+      "description": "Perto do metrô e das principais atrações.",
+      "price_per_night": "650.00",
+      "currency": "BRL",
+      "latitude": "38.710000",
+      "longitude": "-9.140000"
+    }
+  ],
+  "cost_estimate": {
+    "currency": "BRL",
+    "transport": "16000.00",
+    "lodging": "8400.00",
+    "food": "4200.00",
+    "activities": "3400.00",
+    "total": "32000.00",
+    "per_person": "8000.00",
+    "within_budget": true,
+    "notes": "Valores aproximados."
+  },
+  "itinerary_generated_at": "2026-11-12T10:40:00-03:00",
   "days": [
     {
       "id": 101,
@@ -372,6 +397,10 @@ O mesmo do resumo, mais `description`, `style`, `pace`, `transport`,
 
 `days` vem em ordem de data, e `activities` vem em ordem de `order` e depois
 `start_time`.
+
+Antes da primeira geração de roteiro, os campos da IA vêm vazios:
+`"ai_summary": ""`, `"lodging_suggestions": []`, `"cost_estimate": {}` e
+`"itinerary_generated_at": null`. Esses campos são somente leitura.
 
 ### `GET /api/trips/`: listar minhas viagens
 
@@ -538,13 +567,24 @@ inexistente ou de outra pessoa retorna `404`.
 
 ---
 
-## Geração de roteiro com IA 🛠️ (issue S1-16)
+## Geração de roteiro com IA ✅ (issue S1-16)
+
+O código fica em `backend/trips/itinerary.py` e usa o serviço
+`backend/core/gemini.py`.
 
 ### `POST /api/trips/{id}/generate-itinerary/`: gerar ou refazer o roteiro
 
-Usa o Gemini para preencher os dias da viagem com atividades, considerando o
-destino, as datas, o orçamento, o número de viajantes, o estilo, o ritmo e os
-interesses da viagem.
+Envia ao Gemini os dados da viagem: destino, origem, datas (com o dia da
+semana de cada dia), número de viajantes, orçamento, estilo, ritmo,
+transporte, interesses e os **lugares salvos vinculados à viagem** (aba
+"Lugares"). A resposta vem em um formato estruturado com:
+
+- **dias e atividades:** o ritmo define quantas atividades por dia
+  (tranquilo: 3 a 4; moderado: 4 a 5; intenso: 5 a 7), com até 8 por dia;
+- **restaurantes:** almoço e jantar entram como atividades da categoria
+  `gastronomy`, com horário, local e custo;
+- **hospedagem:** até 3 sugestões em `lodging_suggestions`;
+- **estimativas:** custos por categoria em `cost_estimate`.
 
 Requisição (todos os campos são opcionais):
 
@@ -557,10 +597,46 @@ Requisição (todos os campos são opcionais):
 
 | Campo | Padrão | Significado |
 |---|---|---|
-| `replace_existing` | `true` | `true`: apaga as atividades atuais e gera tudo de novo. `false`: só preenche os dias que estão vazios |
+| `replace_existing` | `true` | `true`: apaga as atividades atuais e gera tudo de novo. `false`: só preenche os dias que estão vazios. Se nenhum dia estiver vazio, nada é gerado e a viagem volta sem mudanças |
 | `extra_instructions` | `""` | Pedido livre do usuário (até 500 caracteres), usado no "Ajustar roteiro" |
 
-Resposta `200`: `TripDetail` com os dias preenchidos.
+Resposta `200`: `TripDetail` com os dias preenchidos e os campos
+`ai_summary`, `lodging_suggestions`, `cost_estimate` e
+`itinerary_generated_at` atualizados.
+
+#### `lodging_suggestions`
+
+| Campo | Tipo | Observação |
+|---|---|---|
+| `name` | texto | Nome da hospedagem |
+| `area` | texto | Bairro ou região |
+| `description` | texto | |
+| `price_per_night` | texto decimal ou `null` | Valor por noite para o grupo todo |
+| `currency` | texto | Mesma moeda da viagem |
+| `latitude` / `longitude` | texto decimal ou `null` | Vêm juntas ou as duas `null` |
+
+#### `cost_estimate` (aba "Orçamento")
+
+| Campo | Tipo | Observação |
+|---|---|---|
+| `transport`, `lodging`, `food`, `activities` | texto decimal | Custo total do **grupo** em cada categoria ("Como o orçamento se divide") |
+| `total` | texto decimal | Soma das quatro categorias, calculada pelo backend |
+| `per_person` | texto decimal | `total` dividido por `travelers_count` |
+| `within_budget` | `true`, `false` ou `null` | Se o total cabe no `budget` da viagem. `null` quando a viagem não tem orçamento |
+| `currency`, `notes` | texto | |
+
+#### Validação da resposta da IA
+
+O backend não confia cegamente no Gemini:
+
+- **A resposta é recusada (erro `502`, nada é salvo)** quando: faltar algum
+  dia da viagem, a estrutura vier em formato errado, ou nenhum dia tiver
+  atividades válidas.
+- **Campos individuais estranhos são corrigidos:** categoria desconhecida
+  vira `other`; horário inválido vira `null`; término antes do início é
+  descartado; custo negativo ou inválido vira `0.00`; coordenadas fora do
+  mapa viram `null`; atividades sem título são descartadas; as atividades de
+  cada dia são ordenadas por horário.
 
 **A resposta pode demorar de 10 a 60 segundos.** O frontend deve mostrar um
 estado de carregamento ("Montando seu roteiro…") e impedir cliques
@@ -570,7 +646,8 @@ Erros:
 
 | Status | Quando | Exemplo de corpo |
 |---|---|---|
-| `400` | A viagem não tem destino | `{"destination": ["Escolha um destino antes de gerar o roteiro."]}` |
+| `400` | A viagem não tem destino | `{"destination": ["Escolha um destino antes de gerar o roteiro."]}`. Use as [sugestões de destino](#post-apitripsiddestination-suggestions-sugerir-destinos) |
+| `400` | `extra_instructions` com mais de 500 caracteres | `{"extra_instructions": ["Certifique-se de que este campo não tenha mais de 500 caracteres."]}` |
 | `404` | A viagem não existe ou é de outra pessoa | `{"detail": "Não encontrado."}` |
 | `429` | A cota do Gemini acabou | `{"detail": "Muitas solicitações ao assistente de viagens. Aguarde um pouco e tente novamente."}` |
 | `502` | A IA devolveu algo inválido | `{"detail": "O assistente de viagens devolveu uma resposta inválida. Tente novamente."}` |
@@ -578,6 +655,51 @@ Erros:
 
 Se a geração falhar, **o roteiro anterior é mantido**, sem nenhuma alteração
 parcial.
+
+### `POST /api/trips/{id}/destination-suggestions/`: sugerir destinos
+
+Usado quando o usuário marca "Ainda não escolhi meu destino" (ou quer
+alternativas). Considera a origem, as datas, o orçamento, o estilo, o ritmo e
+os interesses da viagem, além do alcance (`destination_preference`) e dos
+destinos preferidos do perfil. Se a viagem já tiver destino, as sugestões
+são diferentes dele.
+
+Requisição (opcional):
+
+```json
+{ "extra_instructions": "Quero praia." }
+```
+
+Resposta `200` (até 3 opções):
+
+```json
+{
+  "suggestions": [
+    {
+      "destination": "Lisboa, Portugal",
+      "summary": "Cultura, boa comida e dias para caminhar sem pressa.",
+      "reasons": [
+        "Combina com seu interesse por gastronomia",
+        "Cabe no orçamento informado"
+      ],
+      "estimated_cost_per_person": "8000.00",
+      "currency": "BRL",
+      "best_for": ["culture", "gastronomy"]
+    }
+  ]
+}
+```
+
+`estimated_cost_per_person` pode vir `null`. `best_for` usa as chaves de
+[interesses](#interesses-interests-uma-lista-de-chaves).
+
+**Nada é salvo.** Quando o usuário escolher uma opção, o frontend salva o
+destino e gera o roteiro:
+
+1. `PATCH /api/trips/{id}/` com `{"destination": "Lisboa, Portugal"}`;
+2. `POST /api/trips/{id}/generate-itinerary/`.
+
+Erros: os mesmos `404`, `429`, `502` e `503` da geração de roteiro.
 
 ---
 
@@ -734,16 +856,17 @@ Para o frontend não precisar esperar o backend, existem:
 - `frontend/src/services/trips.js`: funções prontas (`listTrips`,
   `getTrip`, `createTrip`, `updateTrip`, `deleteTrip`, `duplicateTrip`,
   `updateDay`, `createActivity`, `updateActivity`, `deleteActivity`,
-  `reorderActivities`, `generateItinerary`). Elas devolvem os dados simulados
-  ou chamam a API de verdade, dependendo da constante `USE_MOCKS`.
+  `reorderActivities`, `generateItinerary`, `suggestDestinations`). Elas
+  devolvem os dados simulados ou chamam a API de verdade, dependendo da
+  constante `USE_MOCKS`.
 
 **Os endpoints de viagens (S1-14) já estão prontos, então `USE_MOCKS` agora é
 `false` por padrão** e as funções chamam a API de verdade. Para isso, o
 backend precisa estar rodando (`python manage.py runserver`).
 
-A exceção é `generateItinerary`: o endpoint de geração de roteiro (S1-16)
-ainda não existe, então, com a API de verdade, essa função retorna erro. Para
-testar a tela de geração antes disso, use os dados simulados.
+`generateItinerary` e `suggestDestinations` usam o Gemini de verdade: o
+`backend/.env` precisa ter `GEMINI_API_KEY`. Sem a chave, elas retornam
+`503`. Os dados simulados não gastam a cota da API.
 
 Para voltar a usar só dados simulados (por exemplo, sem o backend rodando),
 inicie o frontend com:

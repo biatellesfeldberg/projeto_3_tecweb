@@ -8,7 +8,9 @@
 import { getToken } from "./auth";
 
 import {
+  mockDestinationSuggestions,
   mockGeneratedActivities,
+  mockLodgingSuggestions,
   mockTrips,
 } from "../mocks/trips";
 
@@ -214,6 +216,29 @@ export function generateItinerary(
 
   return apiRequest(
     `trips/${tripId}/generate-itinerary/`,
+    {
+      method: "POST",
+      data,
+    },
+  );
+}
+
+// Opções de destino para quem ainda não escolheu (nada é salvo).
+// Devolve { suggestions: [...] }. Também pode demorar alguns segundos.
+export function suggestDestinations(
+  tripId,
+  { extraInstructions = "" } = {},
+) {
+  const data = {
+    extra_instructions: extraInstructions,
+  };
+
+  if (USE_MOCKS) {
+    return mock.suggestDestinations(tripId, data);
+  }
+
+  return apiRequest(
+    `trips/${tripId}/destination-suggestions/`,
     {
       method: "POST",
       data,
@@ -543,6 +568,10 @@ const mock = {
       cover_image_url: data.cover_image_url || "",
       created_at: now(),
       updated_at: now(),
+      ai_summary: "",
+      lodging_suggestions: [],
+      cost_estimate: {},
+      itinerary_generated_at: null,
       days: [],
     };
 
@@ -855,8 +884,60 @@ const mock = {
         );
     });
 
+    const nights = Math.max(trip.duration_days - 1, 1);
+    const lodging = Number(
+      mockLodgingSuggestions[0].price_per_night,
+    ) * nights;
+    const activities = trip.days
+      .flatMap((day) => day.activities)
+      .reduce(
+        (sum, activity) =>
+          sum + Number(activity.total_cost || 0),
+        0,
+      );
+    const food = 150 * trip.travelers_count * trip.duration_days;
+    const transport = 2000 * trip.travelers_count;
+    const total = transport + lodging + food + activities;
+
+    trip.ai_summary =
+      `Roteiro simulado para ${city}.`;
+    trip.lodging_suggestions = copy(
+      mockLodgingSuggestions,
+    );
+    trip.cost_estimate = {
+      currency: trip.currency,
+      transport: transport.toFixed(2),
+      lodging: lodging.toFixed(2),
+      food: food.toFixed(2),
+      activities: activities.toFixed(2),
+      total: total.toFixed(2),
+      per_person: (
+        total / trip.travelers_count
+      ).toFixed(2),
+      within_budget:
+        trip.budget === null
+          ? null
+          : total <= Number(trip.budget),
+      notes: "Valores simulados.",
+    };
+    trip.itinerary_generated_at = now();
     trip.updated_at = now();
 
     return copy(trip);
+  },
+
+  async suggestDestinations(tripId) {
+    await wait(1000);
+
+    const trip = findTrip(tripId);
+
+    return {
+      suggestions: copy(
+        mockDestinationSuggestions,
+      ).filter(
+        (option) =>
+          option.destination !== trip.destination,
+      ),
+    };
   },
 };

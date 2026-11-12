@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .itinerary import generate_itinerary, suggest_destinations
 from .models import Trip
 from .permissions import (
     get_user_activity,
@@ -14,6 +15,8 @@ from .permissions import (
 )
 from .serializers import (
     ActivitySerializer,
+    DestinationSuggestionsSerializer,
+    GenerateItinerarySerializer,
     ReorderSerializer,
     TripDaySerializer,
     TripDayUpdateSerializer,
@@ -101,6 +104,54 @@ def trip_duplicate(request, trip_id):
     return _trip_detail_response(
         request, new_trip.id, response_status=status.HTTP_201_CREATED
     )
+
+
+# ---------------------------------------------------------------------------
+# Geração com IA
+# ---------------------------------------------------------------------------
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def trip_generate_itinerary(request, trip_id):
+    trip = get_user_trip(request.user, trip_id)
+
+    serializer = GenerateItinerarySerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    options = serializer.validated_data
+
+    if not trip.destination:
+        raise ValidationError({
+            "destination": ["Escolha um destino antes de gerar o roteiro."],
+        })
+
+    has_empty_day = trip.days.filter(activities__isnull=True).exists()
+
+    # Sem dias vazios para preencher, não há o que pedir à IA.
+    if options["replace_existing"] or has_empty_day:
+        generate_itinerary(
+            trip,
+            replace_existing=options["replace_existing"],
+            extra_instructions=options["extra_instructions"],
+        )
+
+    return _trip_detail_response(request, trip.id)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def trip_destination_suggestions(request, trip_id):
+    trip = get_user_trip(request.user, trip_id)
+
+    serializer = DestinationSuggestionsSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    suggestions = suggest_destinations(
+        trip,
+        extra_instructions=serializer.validated_data["extra_instructions"],
+    )
+
+    return Response({"suggestions": suggestions})
 
 
 # ---------------------------------------------------------------------------

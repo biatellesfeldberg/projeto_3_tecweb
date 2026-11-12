@@ -124,7 +124,17 @@ class TripDetailSerializer(TripSummarySerializer):
             "pace",
             "transport",
             "interests",
+            "ai_summary",
+            "lodging_suggestions",
+            "cost_estimate",
+            "itinerary_generated_at",
             "days",
+        ]
+        read_only_fields = [
+            "ai_summary",
+            "lodging_suggestions",
+            "cost_estimate",
+            "itinerary_generated_at",
         ]
 
 
@@ -190,6 +200,25 @@ class TripDayUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TripDay
         fields = ["title", "notes"]
+
+
+class GenerateItinerarySerializer(serializers.Serializer):
+    replace_existing = serializers.BooleanField(default=True)
+    extra_instructions = serializers.CharField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+
+
+class DestinationSuggestionsSerializer(serializers.Serializer):
+    extra_instructions = serializers.CharField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
 
 
 class ReorderSerializer(serializers.Serializer):

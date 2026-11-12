@@ -25,6 +25,14 @@ function activity(id, day, order, fields) {
   };
 }
 
+// Campos preenchidos pela geração de roteiro com IA, ainda vazios.
+const noAiFields = {
+  ai_summary: "",
+  lodging_suggestions: [],
+  cost_estimate: {},
+  itinerary_generated_at: null,
+};
+
 function emptyDays(firstId, startDate, count) {
   const days = [];
   const start = new Date(`${startDate}T12:00:00`);
@@ -169,6 +177,30 @@ export const lisbonTrip = {
   cover_image_url: "",
   created_at: "2026-11-10T14:20:00-03:00",
   updated_at: "2026-11-12T09:05:00-03:00",
+  ai_summary: "Lisboa sem pressa, entre cultura, miradouros e boa comida.",
+  lodging_suggestions: [
+    {
+      name: "Hotel Lisboa Centro",
+      area: "Baixa",
+      description: "Perto do metrô e das principais atrações.",
+      price_per_night: "650.00",
+      currency: "BRL",
+      latitude: "38.710000",
+      longitude: "-9.140000",
+    },
+  ],
+  cost_estimate: {
+    currency: "BRL",
+    transport: "16000.00",
+    lodging: "8400.00",
+    food: "4200.00",
+    activities: "3400.00",
+    total: "32000.00",
+    per_person: "8000.00",
+    within_budget: true,
+    notes: "Valores aproximados.",
+  },
+  itinerary_generated_at: "2026-11-12T09:05:00-03:00",
   days: lisbonDays,
 };
 
@@ -197,6 +229,7 @@ export const rioTrip = {
   cover_image_url: "",
   created_at: "2026-11-11T10:00:00-03:00",
   updated_at: "2026-11-11T10:00:00-03:00",
+  ...noAiFields,
   days: emptyDays(201, "2027-02-20", 4),
 };
 
@@ -225,6 +258,7 @@ export const groupTrip = {
   cover_image_url: "",
   created_at: "2026-11-11T18:30:00-03:00",
   updated_at: "2026-11-11T18:30:00-03:00",
+  ...noAiFields,
   days: emptyDays(301, "2027-07-10", 8),
 };
 
@@ -253,6 +287,7 @@ export const pastTrip = {
   cover_image_url: "",
   created_at: "2026-05-02T09:00:00-03:00",
   updated_at: "2026-07-07T20:00:00-03:00",
+  ...noAiFields,
   days: emptyDays(901, "2026-07-03", 4),
 };
 
@@ -286,5 +321,49 @@ export const mockGeneratedActivities = [
     duration_minutes: 90,
     estimated_cost: "0.00",
     cost_type: "per_person",
+  },
+];
+
+// Hospedagem que a "IA simulada" sugere ao gerar um roteiro.
+export const mockLodgingSuggestions = [
+  {
+    name: "Hotel no centro",
+    area: "Centro",
+    description: "Bem localizado, perto do transporte público.",
+    price_per_night: "600.00",
+    currency: "BRL",
+    latitude: null,
+    longitude: null,
+  },
+];
+
+// Opções que a "IA simulada" devolve em suggestDestinations().
+export const mockDestinationSuggestions = [
+  {
+    destination: "Lisboa, Portugal",
+    summary: "Cultura, boa comida e dias para caminhar sem pressa.",
+    reasons: [
+      "Combina com interesse por gastronomia e cultura",
+      "Cidade compacta, boa para conhecer a pé",
+    ],
+    estimated_cost_per_person: "8000.00",
+    currency: "BRL",
+    best_for: ["culture", "gastronomy"],
+  },
+  {
+    destination: "Rio de Janeiro, Brasil",
+    summary: "Praia e cidade no mesmo roteiro.",
+    reasons: ["Praias famosas", "Sem voo internacional"],
+    estimated_cost_per_person: "3500.00",
+    currency: "BRL",
+    best_for: ["beach", "nature"],
+  },
+  {
+    destination: "Sintra, Portugal",
+    summary: "Natureza e palácios a poucos minutos de Lisboa.",
+    reasons: ["Trilhas e paisagens", "Patrimônio histórico"],
+    estimated_cost_per_person: "7500.00",
+    currency: "BRL",
+    best_for: ["nature", "culture", "sightseeing"],
   },
 ];

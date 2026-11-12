@@ -27,7 +27,7 @@ Renata Hemsi Leventhal
 - [x] [S1-13] Modelar viagens, dias e atividades
 - [x] [S1-14] Implementar os endpoints de gerenciamento de viagens
 - [x] [S1-15] Implementar o serviço de comunicação com Gemini
-- [ ] [S1-16] Gerar e salvar roteiros personalizados
+- [x] [S1-16] Gerar e salvar roteiros personalizados
 - [ ] [S1-17] Testar falhas e consistência da geração de roteiros
 - [x] [S1-18] Definir os contratos entre frontend e backend
 - [x] [S1-19] Organizar repositório, quadro e cronograma inicial
@@ -103,12 +103,31 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 
 ### Configurar o Gemini
 
-O backend usa o Google Gemini para gerar os roteiros. As chamadas ficam
-centralizadas em `backend/core/gemini.py` e a chave nunca vai para o frontend.
+O backend usa o Google Gemini para gerar os roteiros e sugerir destinos. As
+chamadas ficam centralizadas em `backend/core/gemini.py` e a chave nunca vai
+para o frontend.
 
-1. Crie uma chave gratuita em https://aistudio.google.com/apikey.
-2. No arquivo `.env`, preencha `GEMINI_API_KEY` com a sua chave.
-3. Opcionalmente, altere `GEMINI_MODEL` (padrão: `gemini-flash-latest`).
+Para criar a chave (gratuita, sem cartão de crédito):
+
+1. Acesse https://aistudio.google.com/apikey e entre com uma conta Google.
+2. Aceite os termos de uso, se for o primeiro acesso.
+3. Clique em **Create API key**. Se for pedido um projeto, escolha
+   **Create API key in new project**.
+4. Copie a chave gerada (ela começa com `AIza`).
+
+Depois, no arquivo `backend/.env`, preencha a linha `GEMINI_API_KEY` com a
+sua chave, sem aspas e sem espaços:
+
+```
+GEMINI_API_KEY=AIza...
+```
+
+Opcionalmente, altere `GEMINI_MODEL` (padrão: `gemini-flash-latest`). Se o
+servidor já estiver rodando, reinicie-o para que ele leia o `.env` de novo.
+
+> **Cuidado:** a chave é pessoal. Ela fica só no `.env`, que não vai para o
+> GitHub. Não coloque a chave no `.env.example`, no código ou em mensagens.
+> Se ela vazar, apague-a na mesma página do AI Studio e crie outra.
 
 Sem a chave, o restante do backend funciona normalmente, mas as
 funcionalidades de IA respondem com erro 503 informando que o assistente
