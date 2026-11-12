@@ -86,6 +86,19 @@ export function AuthProvider({ children }) {
     return () => controller.abort();
   }, []);
 
+  const expireSession = useCallback(() => {
+    revision.current += 1;
+    tokenRef.current = null;
+
+    saveToken(null);
+    setUser(null);
+    setIsRestoring(false);
+
+    setSessionError(
+      "Sua sessão não é mais válida. Entre novamente.",
+    );
+  }, []);
+
   const accountRequest = useCallback(
     async (path, options = {}) => {
       if (!tokenRef.current) {
@@ -200,9 +213,11 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        token: tokenRef.current,
         isRestoring,
         sessionError,
         accountRequest,
+        expireSession,
 
         login: (data, signal) =>
           authenticate("login", data, signal),

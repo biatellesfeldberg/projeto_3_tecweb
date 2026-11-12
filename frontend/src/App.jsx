@@ -12,6 +12,8 @@ import {
 import Header from "./components/Header";
 import AuthPage from "./pages/AuthPage";
 import ProfilePage from "./pages/ProfilePage";
+import TripsPage from "./pages/TripsPage";
+import NewTripPage from "./pages/NewTripPage";
 
 const routes = [
   { path: "/viagens", title: "Minhas viagens" },
@@ -105,7 +107,13 @@ export default function App() {
             key={route.path}
             path={route.path}
             element={
-              route.path === "/entrar" ? (
+              route.path === "/viagens" ? (
+                <TripsPage key="trips" />
+              ) : route.path === "/viagens/nova" ? (
+                <NewTripPage />
+              ) : route.path === "/conta/historico" ? (
+                <TripsPage key="history" history />
+              ) : route.path === "/entrar" ? (
                 <AuthPage key="login" mode="login" />
               ) : route.path === "/cadastro" ? (
                 <AuthPage
