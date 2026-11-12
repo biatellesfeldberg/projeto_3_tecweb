@@ -294,7 +294,14 @@ export default function TripsPage({
                     trip.status}
                 </Badge>
 
-                <h2>{trip.title}</h2>
+                <h2>
+                  <Link
+                    to={`/viagens/${trip.id}`}
+                    className="trip-card-link"
+                  >
+                    {trip.title}
+                  </Link>
+                </h2>
 
                 <p className="muted">
                   {trip.origin} →{" "}
@@ -330,6 +337,13 @@ export default function TripsPage({
                     trip.currency,
                   )}
                 </p>
+
+                <ButtonLink
+                  to={`/viagens/${trip.id}`}
+                  variant="secondary"
+                >
+                  Ver roteiro
+                </ButtonLink>
 
                 {trip.status === "planning" && (
                   <ItineraryGeneration

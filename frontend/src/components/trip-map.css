@@ -1,0 +1,37 @@
+.trip-map {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+
+  border-radius: 10px;
+  background: #e9eee6;
+
+  /* Fica abaixo das janelas e do cabeçalho. */
+  z-index: 0;
+}
+
+.trip-map-marker {
+  display: grid;
+  place-items: center;
+
+  border: 3px solid white;
+  border-radius: 50%;
+  background: var(--color-rumo);
+  color: white;
+
+  box-shadow: 0 2px 8px #193e4059;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.trip-map-marker.is-active {
+  background: #bc6b3e;
+  transform-origin: center;
+  z-index: 1000 !important;
+}
+
+.trip-map .leaflet-popup-content {
+  margin: 10px 14px;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+}

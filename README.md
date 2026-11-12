@@ -33,7 +33,7 @@ Renata Hemsi Leventhal
 - [x] [S1-19] Organizar repositório, quadro e cronograma inicial
 - [x] [S1-20] Implementar os endpoints de lugares salvos
 - [x] [S1-21] Desenvolver Meus lugares e a seleção para viagens
-- [ ] [S1-22] Desenvolver o roteiro diário com edição e mapa
+- [x] [S1-22] Desenvolver o roteiro diário com edição e mapa
 - [ ] [S1-23] Publicar a primeira versão da aplicação
 - [ ] [S1-24] Registrar a entrega e encerrar a Sprint 1
 
