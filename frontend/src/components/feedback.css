@@ -1,0 +1,106 @@
+.feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+
+  margin: 16px 0;
+  padding: 22px;
+
+  border: 1px solid #dfe5de;
+  border-radius: 10px;
+  background: white;
+}
+
+.feedback-content {
+  min-width: 0;
+}
+
+.feedback-title {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.feedback-detail {
+  margin-top: 6px;
+  color: #65736f;
+  overflow-wrap: anywhere;
+}
+
+.feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.feedback-symbol {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+
+  background: #edf1e9;
+  color: var(--color-rumo);
+  font-weight: 700;
+}
+
+.feedback--error {
+  border-color: #e1b5ae;
+  background: #fff5f2;
+}
+
+.feedback--error .feedback-symbol {
+  background: #f7ddd6;
+  color: #8d3028;
+}
+
+.feedback--success {
+  border-color: #cdddc3;
+  background: #edf4e6;
+}
+
+.feedback-spinner {
+  flex-shrink: 0;
+
+  width: 26px;
+  height: 26px;
+
+  border: 3px solid #dfe5de;
+  border-top-color: var(--color-rumo);
+  border-radius: 50%;
+
+  animation: feedback-spin 0.8s linear infinite;
+}
+
+.itinerary-feedback {
+  width: 100%;
+  padding-top: 16px;
+  border-top: 1px solid #dfe5de;
+}
+
+.itinerary-feedback .feedback {
+  margin-bottom: 0;
+  padding: 16px;
+}
+
+@keyframes feedback-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 500px) {
+  .feedback {
+    gap: 12px;
+    padding: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-spinner {
+    animation: none;
+  }
+}

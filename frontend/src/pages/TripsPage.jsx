@@ -9,11 +9,15 @@ import {
 
 import {
   Badge,
-  Button,
   ButtonLink,
   Card,
   PageHeading,
 } from "../components/ui";
+
+import Feedback from "../components/Feedback";
+
+import ItineraryGeneration from
+  "../components/ItineraryGeneration";
 
 import { useAuth } from "../contexts/AuthContext";
 import { listTrips } from "../services/trips";
@@ -49,7 +53,9 @@ export default function TripsPage({
 
   const status = history
     ? "completed"
-    : tripStatuses.some(([value]) => value === selected)
+    : tripStatuses.some(
+          ([value]) => value === selected,
+        )
       ? selected
       : "planning";
 
@@ -93,7 +99,9 @@ export default function TripsPage({
         const sorted = [...trips].sort((a, b) =>
           status === "completed"
             ? b.end_date.localeCompare(a.end_date)
-            : a.start_date.localeCompare(b.start_date),
+            : a.start_date.localeCompare(
+                b.start_date,
+              ),
         );
 
         setResult({
@@ -129,9 +137,10 @@ export default function TripsPage({
 
   if (isRestoring) {
     return (
-      <p role="status">
-        Verificando sua sessão…
-      </p>
+      <Feedback
+        kind="loading"
+        title="Verificando sua sessão…"
+      />
     );
   }
 
@@ -139,7 +148,9 @@ export default function TripsPage({
     return <Navigate to="/entrar" replace />;
   }
 
-  const busy = loading || result.status !== status;
+  const busy =
+    loading ||
+    result.status !== status;
 
   const emptyText =
     status === "completed"
@@ -173,14 +184,19 @@ export default function TripsPage({
         }
       />
 
-      {location.state?.createdTripId && !history && (
-        <p role="status" className="trips-success">
-          Viagem criada com sucesso.
-        </p>
-      )}
+      {location.state?.createdTripId &&
+        !history && (
+          <Feedback
+            kind="success"
+            title="Viagem criada com sucesso."
+          />
+        )}
 
       {history ? (
-        <Link to="/viagens" className="trips-back">
+        <Link
+          to="/viagens"
+          className="trips-back"
+        >
           ← Ver minhas viagens
         </Link>
       ) : (
@@ -188,55 +204,57 @@ export default function TripsPage({
           className="trip-filters"
           aria-label="Situação das viagens"
         >
-          {tripStatuses.map(([value, label]) => (
-            <Link
-              key={value}
-              to={`/viagens?status=${value}`}
-              className={`button button--${
-                status === value
-                  ? "primary"
-                  : "secondary"
-              }`}
-              aria-current={
-                status === value
-                  ? "page"
-                  : undefined
-              }
-            >
-              {label}
-            </Link>
-          ))}
+          {tripStatuses.map(
+            ([value, label]) => (
+              <Link
+                key={value}
+                to={`/viagens?status=${value}`}
+                className={`button button--${
+                  status === value
+                    ? "primary"
+                    : "secondary"
+                }`}
+                aria-current={
+                  status === value
+                    ? "page"
+                    : undefined
+                }
+              >
+                {label}
+              </Link>
+            ),
+          )}
         </nav>
       )}
 
       {error ? (
-        <Card className="trips-empty">
-          <p role="alert">{error}</p>
-
-          <Button
-            onClick={() =>
-              setRetry((value) => value + 1)
-            }
-          >
-            Tentar novamente
-          </Button>
-        </Card>
+        <Feedback
+          kind="error"
+          title="Não foi possível carregar suas viagens."
+          detail={error}
+          onRetry={() =>
+            setRetry((value) => value + 1)
+          }
+        />
       ) : busy ? (
-        <p role="status">Carregando viagens…</p>
+        <Feedback
+          kind="loading"
+          title="Carregando viagens…"
+        />
       ) : result.trips.length === 0 ? (
-        <Card className="trips-empty">
-          <h2>
-            {status === "completed"
+        <Feedback
+          kind="empty"
+          title={
+            status === "completed"
               ? "Ainda há muitas histórias pela frente."
-              : "Um novo plano espera por você."}
-          </h2>
-
-          <p className="muted">{emptyText}</p>
-
+              : "Um novo plano espera por você."
+          }
+          detail={emptyText}
+        >
           <ButtonLink to="/viagens/nova">
             Planejar viagem
           </ButtonLink>
-        </Card>
+        </Feedback>
       ) : (
         <div className="trips-grid">
           {result.trips.map((trip, index) => (
@@ -258,7 +276,8 @@ export default function TripsPage({
                     alt=""
                     loading="lazy"
                     onError={(event) => {
-                      event.currentTarget.hidden = true;
+                      event.currentTarget.hidden =
+                        true;
                     }}
                   />
                 )}
@@ -284,9 +303,13 @@ export default function TripsPage({
                 </p>
 
                 <p>
-                  {formatTripDate(trip.start_date)}
+                  {formatTripDate(
+                    trip.start_date,
+                  )}
                   {" — "}
-                  {formatTripDate(trip.end_date)}
+                  {formatTripDate(
+                    trip.end_date,
+                  )}
                 </p>
 
                 <p className="muted">
@@ -307,6 +330,12 @@ export default function TripsPage({
                     trip.currency,
                   )}
                 </p>
+
+                {trip.status === "planning" && (
+                  <ItineraryGeneration
+                    trip={trip}
+                  />
+                )}
               </div>
             </Card>
           ))}

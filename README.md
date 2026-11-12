@@ -20,9 +20,9 @@ Renata Hemsi Leventhal
 - [ ] [S1-06] Conferir autenticação na primeira versão publicada
 - [x] [S1-07] Configurar React e a navegação principal
 - [x] [S1-08] Desenvolver as telas de cadastro e login
-- [ ] [S1-09] Desenvolver a tela de perfil e preferências
-- [ ] [S1-10] Desenvolver Minhas viagens e o formulário de planejamento
-- [ ] [S1-11] Implementar estados de carregamento, vazio e erro
+- [x] [S1-09] Desenvolver a tela de perfil e preferências
+- [x] [S1-10] Desenvolver Minhas viagens e o formulário de planejamento
+- [x] [S1-11] Implementar estados de carregamento, vazio e erro
 - [ ] [S1-12] Validar o fluxo de conta e criação de viagem
 - [x] [S1-13] Modelar viagens, dias e atividades
 - [x] [S1-14] Implementar os endpoints de gerenciamento de viagens
