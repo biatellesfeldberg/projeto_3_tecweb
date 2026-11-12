@@ -29,7 +29,7 @@ Renata Hemsi Leventhal
 - [x] [S1-15] Implementar o serviço de comunicação com Gemini
 - [ ] [S1-16] Gerar e salvar roteiros personalizados
 - [ ] [S1-17] Testar falhas e consistência da geração de roteiros
-- [ ] [S1-18] Definir os contratos entre frontend e backend
+- [x] [S1-18] Definir os contratos entre frontend e backend
 - [x] [S1-19] Organizar repositório, quadro e cronograma inicial
 - [ ] [S1-20] Implementar os endpoints de lugares salvos
 - [ ] [S1-21] Desenvolver Meus lugares e a seleção para viagens
@@ -64,6 +64,17 @@ Renata Hemsi Leventhal
 - [ ] [S2-23] Finalizar a documentação do projeto
 - [ ] [S2-24] Encerrar o quadro e conferir os requisitos da entrega
 
+## Contratos da API
+
+Os endpoints, campos e exemplos de resposta de **conta**, **viagens** e
+**geração de roteiro** estão documentados em
+[`docs/contratos-api.md`](docs/contratos-api.md). Qualquer mudança na API deve
+atualizar esse arquivo no mesmo commit.
+
+Enquanto os endpoints de viagens não ficam prontos, o frontend usa dados
+simulados (`frontend/src/mocks/trips.js`) por meio de
+`frontend/src/services/trips.js`.
+
 ## Executar o backend localmente
 
 Na primeira execução:
@@ -90,6 +101,25 @@ Copie `.env.example` para `.env` e configure uma chave própria em
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
+### Configurar o Gemini
+
+O backend usa o Google Gemini para gerar os roteiros. As chamadas ficam
+centralizadas em `backend/core/gemini.py` e a chave nunca vai para o frontend.
+
+1. Crie uma chave gratuita em https://aistudio.google.com/apikey.
+2. No arquivo `.env`, preencha `GEMINI_API_KEY` com a sua chave.
+3. Opcionalmente, altere `GEMINI_MODEL` (padrão: `gemini-flash-latest`).
+
+Sem a chave, o restante do backend funciona normalmente, mas as
+funcionalidades de IA respondem com erro 503 informando que o assistente
+não está configurado.
+
+Para conferir se a chave está funcionando:
+
+```bash
+python manage.py shell -c "from core.gemini import generate_text; print(generate_text('Sugira um passeio em Lisboa em uma frase.'))"
+```
+
 Depois, execute:
 
 ```bash
@@ -104,3 +134,13 @@ Para criar uma conta administrativa:
 ```bash
 python manage.py createsuperuser
 ```
+
+## Executar os testes
+
+```bash
+cd backend
+source .venv/bin/activate
+python manage.py test
+```
+
+Os testes do Gemini usam respostas simuladas e não consomem a cota da API.
