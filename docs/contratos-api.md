@@ -714,3 +714,35 @@ VITE_USE_MOCKS=false npm run dev
 
 Os erros seguem o mesmo padrão de `services/auth.js`: as funções lançam
 `ApiError`, com `message`, `fields` (erros por campo) e `status`.
+
+## Permissões dos dados pessoais
+
+- Perfil e foto utilizam o usuário identificado pelo token.
+- Lugares e viagens são restritos aos respectivos donos.
+- O backend define a propriedade dos recursos.
+- Recursos inexistentes ou pertencentes a outro usuário retornam 404.
+- Campos de identificação e privilégios não podem ser alterados pelo
+  endpoint de atualização do perfil.
+
+### Consulta protegida da foto
+
+`GET /api/auth/me/photo/` exige o cabeçalho
+`Authorization: Token <token>` e retorna o arquivo da foto do usuário
+autenticado.
+
+Sem autenticação, retorna 401. Se o usuário não tiver foto, retorna 404.
+
+O campo `photo` do perfil retorna a URL completa desse endpoint ou `null`.
+O frontend deve buscar a imagem com autenticação e convertê-la em Blob
+para exibição.
+
+As fotos não são mais disponibilizadas diretamente por `/media/`.
+
+### Implementação dos endpoints de viagens
+
+Os endpoints da S1-14 deverão utilizar as funções de
+`backend/trips/permissions.py` para recuperar viagens, dias e atividades
+autorizados antes de consultar ou modificar seus dados.
+
+Os testes de permissões HTTP deverão ser ampliados quando esses
+endpoints forem implementados.

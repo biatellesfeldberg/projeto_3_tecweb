@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -112,7 +112,17 @@ class LoginSerializer(serializers.Serializer):
     )
 
 class ProfileSerializer(serializers.ModelSerializer):
-    photo = serializers.ImageField(read_only=True)
+    photo = serializers.SerializerMethodField()
+
+    def get_photo(self, user):
+        if not user.photo:
+            return None
+
+        request = self.context["request"]
+
+        return request.build_absolute_uri(
+            reverse("profile-photo")
+        )
 
     class Meta:
         model = User

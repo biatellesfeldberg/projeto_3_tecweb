@@ -21,6 +21,11 @@ from .serializers import (
     ProfilePhotoSerializer,
 )
 
+import mimetypes
+
+from django.http import FileResponse
+from rest_framework.exceptions import NotFound
+
 
 User = get_user_model()
 
@@ -114,11 +119,31 @@ def me(request):
         ).data
     )
 
-@api_view(["PATCH", "DELETE"])
+@api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def profile_photo(request):
     user = request.user
+
+    if request.method == "GET":
+        if not user.photo:
+            raise NotFound()
+
+        content_type, _ = mimetypes.guess_type(
+            user.photo.name
+        )
+
+        response = FileResponse(
+            user.photo.open("rb"),
+            content_type=(
+                content_type
+                or "application/octet-stream"
+            ),
+        )
+
+        response["Cache-Control"] = "private, no-store"
+
+        return response
 
     if request.method == "DELETE":
         if user.photo:

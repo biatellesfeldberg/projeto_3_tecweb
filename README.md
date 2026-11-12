@@ -16,7 +16,7 @@ Renata Hemsi Leventhal
 - [x] [S1-02] Configurar o backend em Django REST Framework
 - [x] [S1-03] Implementar cadastro e autenticação
 - [x] [S1-04] Implementar perfil e preferências de viagem no backend
-- [ ] [S1-05] Implementar e testar as permissões dos dados pessoais
+- [x] [S1-05] Implementar e testar as permissões dos dados pessoais
 - [ ] [S1-06] Conferir autenticação na primeira versão publicada
 - [x] [S1-07] Configurar React e a navegação principal
 - [x] [S1-08] Desenvolver as telas de cadastro e login

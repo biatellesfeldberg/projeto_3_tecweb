@@ -73,9 +73,25 @@ class PlaceSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def get_trips(self, place):
-        # Usa o prefetch das views quando disponível.
-        trips = sorted(place.trips.all(), key=lambda trip: (trip.start_date, trip.id))
-        return PlaceTripSerializer(trips, many=True).data
+        user = self.context["request"].user
+
+        trips = [
+            trip
+            for trip in place.trips.all()
+            if trip.owner_id == user.pk
+        ]
+
+        trips.sort(
+            key=lambda trip: (
+                trip.start_date,
+                trip.id,
+            )
+        )
+
+        return PlaceTripSerializer(
+            trips,
+            many=True,
+        ).data
 
     def validate_trip_ids(self, value):
         trip_ids = list(dict.fromkeys(value))  # Remove repetidos, mantendo a ordem.
