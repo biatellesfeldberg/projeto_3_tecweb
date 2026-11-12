@@ -1,13 +1,25 @@
+## Membros:
+Ana Carolina Martinez Ferreira
+Beatriz Telles Feldberg
+Luana Hughes Freitas
+Renata Hemsi Leventhal
+
+## Sobre o Projeto:
+
+
+
+
+
 ## Sprint 1 — 10/11 a 13/11/2026
 
 - [x] [S1-01] Fluxo de telas e tasklist
 - [x] [S1-02] Configurar o backend em Django REST Framework
 - [x] [S1-03] Implementar cadastro e autenticação
-- [ ] [S1-04] Implementar perfil e preferências de viagem no backend
+- [x] [S1-04] Implementar perfil e preferências de viagem no backend
 - [ ] [S1-05] Implementar e testar as permissões dos dados pessoais
 - [ ] [S1-06] Conferir autenticação na primeira versão publicada
 - [x] [S1-07] Configurar React e a navegação principal
-- [ ] [S1-08] Desenvolver as telas de cadastro e login
+- [x] [S1-08] Desenvolver as telas de cadastro e login
 - [ ] [S1-09] Desenvolver a tela de perfil e preferências
 - [ ] [S1-10] Desenvolver Minhas viagens e o formulário de planejamento
 - [ ] [S1-11] Implementar estados de carregamento, vazio e erro

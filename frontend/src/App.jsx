@@ -10,11 +10,8 @@ import {
 } from "react-router-dom";
 
 import Header from "./components/Header";
+import AuthPage from "./pages/AuthPage";
 
-/*
-  Apenas os caminhos da aplicação.
-  As telas serão adicionadas nas respectivas etapas.
-*/
 const routes = [
   { path: "/viagens", title: "Minhas viagens" },
   { path: "/viagens/nova", title: "Planejar viagem" },
@@ -106,7 +103,18 @@ export default function App() {
           <Route
             key={route.path}
             path={route.path}
-            element={<></>}
+            element={
+              route.path === "/entrar" ? (
+                <AuthPage key="login" mode="login" />
+              ) : route.path === "/cadastro" ? (
+                <AuthPage
+                  key="register"
+                  mode="register"
+                />
+              ) : (
+                <></>
+              )
+            }
           />
         ))}
 

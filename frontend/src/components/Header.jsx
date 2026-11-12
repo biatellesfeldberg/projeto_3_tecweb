@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+
 import {
   Link,
   NavLink,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
 import { Avatar } from "./ui";
+import { useAuth } from "../contexts/AuthContext";
 
 const navigation = [
   { to: "/viagens", label: "Minhas viagens" },
@@ -14,12 +17,46 @@ const navigation = [
 ];
 
 export default function Header() {
+  const { user, isRestoring, logout } = useAuth();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [accountOpen, setAccountOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
   const accountRef = useRef(null);
   const triggerRef = useRef(null);
 
-  const location = useLocation();
+  const name = user?.first_name || "Conta";
+
+  const initials = user
+    ? (
+        `${user.first_name?.[0] || ""}` +
+        `${user.last_name?.[0] || ""}`
+      ).toUpperCase() || "EU"
+    : "EU";
+
+  async function handleLogout() {
+    if (loggingOut) {
+      return;
+    }
+
+    setLoggingOut(true);
+    setLogoutError("");
+
+    try {
+      await logout();
+
+      setAccountOpen(false);
+      navigate("/entrar", { replace: true });
+    } catch (error) {
+      setLogoutError(error.message);
+    } finally {
+      setLoggingOut(false);
+    }
+  }
 
   useEffect(() => {
     setAccountOpen(false);
@@ -127,10 +164,12 @@ export default function Header() {
               }
             >
               <span aria-hidden="true">
-                <Avatar />
+                <Avatar name={name} initials={initials} />
               </span>
 
-              <span>Conta</span>
+              <span>
+                {isRestoring ? "Aguarde…" : name}
+              </span>
 
               <span aria-hidden="true">⌄</span>
             </button>
@@ -157,9 +196,34 @@ export default function Header() {
 
                 <div className="menu-divider" />
 
-                <Link to="/entrar">Entrar</Link>
+                {user ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={loggingOut}
+                      onClick={handleLogout}
+                    >
+                      {loggingOut ? "Saindo…" : "Sair"}
+                    </button>
 
-                <Link to="/cadastro">Criar conta</Link>
+                    {logoutError && (
+                      <p
+                        className="logout-error"
+                        role="alert"
+                      >
+                        {logoutError}
+                      </p>
+                    )}
+                  </>
+                ) : !isRestoring && (
+                  <>
+                    <Link to="/entrar">Entrar</Link>
+
+                    <Link to="/cadastro">
+                      Criar conta
+                    </Link>
+                  </>
+                )}
               </nav>
             )}
           </div>
