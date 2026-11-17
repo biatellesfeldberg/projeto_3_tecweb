@@ -92,6 +92,7 @@ class TripDaySerializer(serializers.ModelSerializer):
 
 class TripSummarySerializer(serializers.ModelSerializer):
     duration_days = serializers.IntegerField(read_only=True)
+    owner_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Trip
@@ -111,6 +112,7 @@ class TripSummarySerializer(serializers.ModelSerializer):
             "cover_image_url",
             "created_at",
             "updated_at",
+            "owner_id",
         ]
 
 
@@ -172,6 +174,18 @@ class TripWriteSerializer(serializers.ModelSerializer):
         return list(dict.fromkeys(value))
 
     def validate(self, attrs):
+        if (
+            self.instance is not None
+            and attrs.get("mode") == Trip.Mode.SOLO
+            and self.instance.memberships.exists()
+        ):
+            raise serializers.ValidationError({
+                "mode": [
+                    "Remova os convites e participantes antes "
+                    "de mudar para viagem individual."
+                ],
+            })
+        
         start_date = attrs.get(
             "start_date", getattr(self.instance, "start_date", None)
         )

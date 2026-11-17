@@ -12,6 +12,8 @@ from .permissions import (
     get_user_day,
     get_user_trip,
     trips_for_user,
+    accessible_trips_for_user,
+    get_accessible_trip,
 )
 from .serializers import (
     ActivitySerializer,
@@ -35,7 +37,9 @@ from .services import (
 
 def _trip_detail_response(request, trip_id, response_status=status.HTTP_200_OK):
     # Recarrega a viagem com dias e atividades já ordenados.
-    trip = trip_with_itinerary(trips_for_user(request.user)).get(id=trip_id)
+    trip = trip_with_itinerary(
+        accessible_trips_for_user(request.user)
+    ).get(id=trip_id)
     return Response(TripDetailSerializer(trip).data, status=response_status)
 
 
@@ -61,7 +65,7 @@ def trip_list(request):
             request, trip.id, response_status=status.HTTP_201_CREATED
         )
 
-    trips = trips_for_user(request.user)
+    trips = accessible_trips_for_user(request.user)
 
     trip_status = request.query_params.get("status", "").strip()
     if trip_status:
@@ -77,7 +81,16 @@ def trip_list(request):
 @api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
 def trip_detail(request, trip_id):
-    trip = get_user_trip(request.user, trip_id)
+    if request.method == "GET":
+        trip = get_accessible_trip(
+            request.user,
+            trip_id,
+        )
+    else:
+        trip = get_user_trip(
+            request.user,
+            trip_id,
+        )
 
     if request.method == "DELETE":
         trip.delete()

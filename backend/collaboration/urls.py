@@ -39,4 +39,35 @@ urlpatterns = [
         views.reject_friend_request,
         name="friend-request-reject",
     ),
+
+    path(
+    "trips/<int:trip_id>/members/",
+    views.trip_members,
+    name="trip-members",
+    ),
+    path(
+        "trips/<int:trip_id>/members/<int:user_id>/",
+        views.remove_trip_member,
+        name="trip-member-remove",
+    ),
+    path(
+        "trips/<int:trip_id>/leave/",
+        views.leave_trip,
+        name="trip-leave",
+    ),
+    path(
+        "trip-invitations/",
+        views.trip_invitation_list,
+        name="trip-invitations",
+    ),
+    path(
+        "trip-invitations/<int:invitation_id>/accept/",
+        views.accept_trip_invitation,
+        name="trip-invitation-accept",
+    ),
+    path(
+        "trip-invitations/<int:invitation_id>/reject/",
+        views.reject_trip_invitation,
+        name="trip-invitation-reject",
+    ),
 ]

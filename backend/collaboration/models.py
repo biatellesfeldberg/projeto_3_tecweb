@@ -57,3 +57,58 @@ class Friendship(models.Model):
             f"{self.sender_id} / "
             f"{self.recipient_id}: {self.status}"
         )
+
+
+class TripMembership(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Convite pendente"
+        ACCEPTED = "accepted", "Participante"
+
+    trip = models.ForeignKey(
+        "trips.Trip",
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="trip_memberships",
+    )
+
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_trip_invitations",
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["trip", "user"],
+                name="unique_trip_membership",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    status__in=["pending", "accepted"],
+                ),
+                name="trip_membership_valid_status",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"Viagem {self.trip_id} / "
+            f"usuário {self.user_id}: {self.status}"
+        )
