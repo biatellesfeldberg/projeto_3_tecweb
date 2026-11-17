@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.db.models import Q
 
-from .models import Friendship, TripMembership
+from .models import Friendship, TripMembership, TripQuestionnaire
 
 
 User = get_user_model()
@@ -138,3 +138,82 @@ class InviteTripMemberSerializer(serializers.Serializer):
             })
 
         return attrs
+
+
+class TripQuestionnaireSerializer(serializers.ModelSerializer):
+    interests = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=User.Interest.choices,
+        ),
+        required=True,
+        allow_empty=False,
+        max_length=20,
+    )
+
+    avoided_destinations = serializers.ListField(
+        child=serializers.CharField(max_length=120),
+        required=False,
+        default=list,
+        max_length=20,
+    )
+
+    notes = serializers.CharField(
+        max_length=500,
+        allow_blank=True,
+        required=False,
+        default="",
+    )
+
+    class Meta:
+        model = TripQuestionnaire
+
+        fields = [
+            "id",
+            "trip",
+            "user",
+            "currency",
+            "landscape",
+            "max_budget",
+            "days",
+            "pace",
+            "gastronomy_importance",
+            "destination_preference",
+            "climate",
+            "accommodation",
+            "interests",
+            "avoided_destinations",
+            "notes",
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "id",
+            "trip",
+            "user",
+            "currency",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate(self, attrs):
+        writable = (
+            set(self.fields)
+            - set(self.Meta.read_only_fields)
+        )
+
+        invalid_fields = set(self.initial_data) - writable
+
+        if invalid_fields:
+            raise serializers.ValidationError({
+                field: ["Campo não permitido."]
+                for field in sorted(invalid_fields)
+            })
+
+        return attrs
+
+    def validate_interests(self, value):
+        return list(dict.fromkeys(value))
+
+    def validate_avoided_destinations(self, value):
+        return list(dict.fromkeys(value))

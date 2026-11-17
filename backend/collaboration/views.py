@@ -11,13 +11,14 @@ from rest_framework.response import Response
 from trips.models import Trip
 from trips.permissions import get_accessible_trip, get_user_trip
 
-from .models import Friendship, TripMembership
+from .models import Friendship, TripMembership, TripQuestionnaire
 from .serializers import (
     FriendshipSerializer,
     PublicUserSerializer,
     SendFriendRequestSerializer,
     TripMembershipSerializer,
     InviteTripMemberSerializer,
+    TripQuestionnaireSerializer,
 )
 
 
@@ -331,7 +332,10 @@ def reject_trip_invitation(request, invitation_id):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def remove_trip_member(request, trip_id, user_id):
-    trip = get_user_trip(request.user, trip_id)
+    trip = get_user_trip(
+        request.user,
+        trip_id,
+    )
 
     if user_id == trip.owner_id:
         raise ValidationError({
@@ -340,13 +344,19 @@ def remove_trip_member(request, trip_id, user_id):
             ],
         })
 
-    deleted, _ = TripMembership.objects.filter(
-        trip=trip,
-        user_id=user_id,
-    ).delete()
+    with transaction.atomic():
+        deleted, _ = TripMembership.objects.filter(
+            trip=trip,
+            user_id=user_id,
+        ).delete()
 
-    if not deleted:
-        raise NotFound()
+        if not deleted:
+            raise NotFound()
+
+        TripQuestionnaire.objects.filter(
+            trip=trip,
+            user_id=user_id,
+        ).delete()
 
     return Response(
         status=status.HTTP_204_NO_CONTENT,
@@ -356,7 +366,10 @@ def remove_trip_member(request, trip_id, user_id):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def leave_trip(request, trip_id):
-    trip = get_accessible_trip(request.user, trip_id)
+    trip = get_accessible_trip(
+        request.user,
+        trip_id,
+    )
 
     if trip.owner_id == request.user.pk:
         raise ValidationError({
@@ -366,15 +379,129 @@ def leave_trip(request, trip_id):
             ),
         })
 
-    deleted, _ = TripMembership.objects.filter(
-        trip=trip,
-        user=request.user,
-        status=TripMembership.Status.ACCEPTED,
-    ).delete()
+    with transaction.atomic():
+        deleted, _ = TripMembership.objects.filter(
+            trip=trip,
+            user=request.user,
+            status=TripMembership.Status.ACCEPTED,
+        ).delete()
 
-    if not deleted:
-        raise NotFound()
+        if not deleted:
+            raise NotFound()
+
+        TripQuestionnaire.objects.filter(
+            trip=trip,
+            user=request.user,
+        ).delete()
 
     return Response(
         status=status.HTTP_204_NO_CONTENT,
     )
+
+
+@api_view(["GET", "PUT", "PATCH"])
+@permission_classes([IsAuthenticated])
+def my_trip_questionnaire(request, trip_id):
+    trip = get_accessible_trip(
+        request.user,
+        trip_id,
+    )
+
+    answer = TripQuestionnaire.objects.filter(
+        trip=trip,
+        user=request.user,
+    ).first()
+
+    if request.method == "GET":
+        return Response({
+            "answered": answer is not None,
+            "answers": (
+                TripQuestionnaireSerializer(answer).data
+                if answer
+                else None
+            ),
+        })
+
+    if request.method == "PATCH" and answer is None:
+        raise NotFound(
+            "Envie o questionário completo com PUT "
+            "antes de atualizar."
+        )
+
+    serializer = TripQuestionnaireSerializer(
+        answer,
+        data=request.data,
+        partial=request.method == "PATCH",
+    )
+
+    serializer.is_valid(raise_exception=True)
+
+    defaults = dict(serializer.validated_data)
+
+    if answer is None:
+        defaults["currency"] = trip.currency
+
+    answer, created = TripQuestionnaire.objects.update_or_create(
+        trip=trip,
+        user=request.user,
+        defaults=defaults,
+    )
+
+    return Response(
+        {
+            "answered": True,
+            "answers": TripQuestionnaireSerializer(answer).data,
+        },
+        status=(
+            status.HTTP_201_CREATED
+            if created
+            else status.HTTP_200_OK
+        ),
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def trip_questionnaire_progress(request, trip_id):
+    trip = get_accessible_trip(
+        request.user,
+        trip_id,
+    )
+
+    members = list(
+        User.objects.filter(
+            Q(pk=trip.owner_id)
+            | Q(
+                trip_memberships__trip=trip,
+                trip_memberships__status=(
+                    TripMembership.Status.ACCEPTED
+                ),
+            )
+        ).distinct().order_by("id")
+    )
+
+    answered_ids = set(
+        TripQuestionnaire.objects.filter(
+            trip=trip,
+            user_id__in=[
+                member.pk
+                for member in members
+            ],
+        ).values_list("user_id", flat=True)
+    )
+
+    total = len(members)
+
+    return Response({
+        "total_members": total,
+        "answered_count": len(answered_ids),
+        "remaining_count": total - len(answered_ids),
+        "all_answered": len(answered_ids) == total,
+        "members": [
+            {
+                "user": PublicUserSerializer(member).data,
+                "answered": member.pk in answered_ids,
+            }
+            for member in members
+        ],
+    })

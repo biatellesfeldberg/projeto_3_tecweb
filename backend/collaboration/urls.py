@@ -70,4 +70,15 @@ urlpatterns = [
         views.reject_trip_invitation,
         name="trip-invitation-reject",
     ),
+
+    path(
+        "trips/<int:trip_id>/questionnaire/me/",
+        views.my_trip_questionnaire,
+        name="my-trip-questionnaire",
+    ),
+    path(
+        "trips/<int:trip_id>/questionnaire/progress/",
+        views.trip_questionnaire_progress,
+        name="trip-questionnaire-progress",
+    ),
 ]
