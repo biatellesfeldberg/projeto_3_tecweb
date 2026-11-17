@@ -1,6 +1,5 @@
-from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -9,26 +8,24 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from trips.permissions import get_accessible_trip, get_user_trip
+from trips.permissions import (
+    get_accessible_trip,
+    get_user_trip,
+    trip_participants,
+)
 
-from .models import TripMembership, TripPoll, PollOption, PollVote
+from .models import TripPoll, PollOption, PollVote
+from .permissions import get_poll_for_trip
 from .poll_serializers import (
     CreatePollSerializer,
     VoteSerializer,
     ClosePollSerializer,
 )
 
-User = get_user_model()
-
 
 def eligible_user_ids(trip):
-    return User.objects.filter(
-        Q(pk=trip.owner_id)
-        | Q(
-            trip_memberships__trip=trip,
-            trip_memberships__status=TripMembership.Status.ACCEPTED,
-        )
-    ).values("pk").distinct()
+    return trip_participants(trip).values("pk")
+
 
 
 def poll_results(poll):
@@ -128,12 +125,7 @@ def trip_polls(request, trip_id):
 @permission_classes([IsAuthenticated])
 def poll_detail(request, trip_id, poll_id):
     trip = get_accessible_trip(request.user, trip_id)
-
-    poll = get_object_or_404(
-        TripPoll,
-        pk=poll_id,
-        trip=trip,
-    )
+    poll = get_poll_for_trip(trip, poll_id)
 
     return Response(poll_data(poll, request.user))
 
@@ -147,10 +139,10 @@ def poll_vote(request, trip_id, poll_id):
     serializer.is_valid(raise_exception=True)
 
     with transaction.atomic():
-        poll = get_object_or_404(
-            TripPoll.objects.select_for_update(),
-            pk=poll_id,
-            trip=trip,
+        poll = get_poll_for_trip(
+            trip,
+            poll_id,
+            for_update=True,
         )
 
         if poll.status != TripPoll.Status.OPEN:
@@ -184,10 +176,10 @@ def close_poll(request, trip_id, poll_id):
     serializer.is_valid(raise_exception=True)
 
     with transaction.atomic():
-        poll = get_object_or_404(
-            TripPoll.objects.select_for_update(),
-            pk=poll_id,
-            trip=trip,
+        poll = get_poll_for_trip(
+            trip,
+            poll_id,
+            for_update=True,
         )
 
         if poll.status != TripPoll.Status.OPEN:

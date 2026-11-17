@@ -9,7 +9,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from trips.models import Trip
-from trips.permissions import get_accessible_trip, get_user_trip
+from trips.permissions import (
+    get_accessible_trip,
+    get_user_trip,
+    trip_participants,
+)
+
+from .permissions import pending_trip_invitations_for_user
 
 from .models import Friendship, TripMembership, TripQuestionnaire
 from .serializers import (
@@ -275,13 +281,9 @@ def trip_members(request, trip_id):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def trip_invitation_list(request):
-    invitations = TripMembership.objects.filter(
-        user=request.user,
-        status=TripMembership.Status.PENDING,
-    ).select_related(
-        "trip",
-        "user",
-        "invited_by",
+    invitations = (
+        pending_trip_invitations_for_user(request.user)
+        .select_related("trip", "user", "invited_by")
     )
 
     return Response(
@@ -295,13 +297,13 @@ def trip_invitation_list(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def accept_trip_invitation(request, invitation_id):
-    updated = TripMembership.objects.filter(
-        pk=invitation_id,
-        user=request.user,
-        status=TripMembership.Status.PENDING,
-    ).update(
-        status=TripMembership.Status.ACCEPTED,
-        updated_at=timezone.now(),
+    updated = (
+        pending_trip_invitations_for_user(request.user)
+        .filter(pk=invitation_id)
+        .update(
+            status=TripMembership.Status.ACCEPTED,
+            updated_at=timezone.now(),
+        )
     )
 
     if not updated:
@@ -315,11 +317,11 @@ def accept_trip_invitation(request, invitation_id):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def reject_trip_invitation(request, invitation_id):
-    deleted, _ = TripMembership.objects.filter(
-        pk=invitation_id,
-        user=request.user,
-        status=TripMembership.Status.PENDING,
-    ).delete()
+    deleted, _ = (
+        pending_trip_invitations_for_user(request.user)
+        .filter(pk=invitation_id)
+        .delete()
+    )
 
     if not deleted:
         raise NotFound()
@@ -469,15 +471,7 @@ def trip_questionnaire_progress(request, trip_id):
     )
 
     members = list(
-        User.objects.filter(
-            Q(pk=trip.owner_id)
-            | Q(
-                trip_memberships__trip=trip,
-                trip_memberships__status=(
-                    TripMembership.Status.ACCEPTED
-                ),
-            )
-        ).distinct().order_by("id")
+        trip_participants(trip).order_by("id")
     )
 
     answered_ids = set(
