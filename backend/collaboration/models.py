@@ -239,3 +239,87 @@ class TripQuestionnaire(models.Model):
             f"Questionário da viagem {self.trip_id} / "
             f"usuário {self.user_id}"
         )
+
+
+class TripPoll(models.Model):
+    class Category(models.TextChoices):
+        DESTINATION = "destination", "Destino"
+        RESTAURANT = "restaurant", "Restaurante"
+        ACTIVITY = "activity", "Atividade"
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Aberta"
+        CLOSED = "closed", "Encerrada"
+
+    trip = models.ForeignKey(
+        "trips.Trip",
+        on_delete=models.CASCADE,
+        related_name="polls",
+    )
+    title = models.CharField(max_length=150)
+    category = models.CharField(
+        max_length=15,
+        choices=Category.choices,
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.OPEN,
+    )
+    decision = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(status__in=["open", "closed"]),
+                name="poll_valid_status",
+            ),
+        ]
+
+
+class PollOption(models.Model):
+    poll = models.ForeignKey(
+        TripPoll,
+        on_delete=models.CASCADE,
+        related_name="options",
+    )
+    label = models.CharField(max_length=150)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["poll", "label"],
+                name="unique_poll_option",
+            ),
+        ]
+
+
+class PollVote(models.Model):
+    poll = models.ForeignKey(
+        TripPoll,
+        on_delete=models.CASCADE,
+        related_name="votes",
+    )
+    option = models.ForeignKey(
+        PollOption,
+        on_delete=models.CASCADE,
+        related_name="votes",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="poll_votes",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["poll", "user"],
+                name="unique_vote_per_poll_user",
+            ),
+        ]

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, poll_views
 
 
 urlpatterns = [
@@ -80,5 +80,26 @@ urlpatterns = [
         "trips/<int:trip_id>/questionnaire/progress/",
         views.trip_questionnaire_progress,
         name="trip-questionnaire-progress",
+    ),
+
+    path(
+        "trips/<int:trip_id>/polls/",
+        poll_views.trip_polls,
+        name="trip-polls",
+    ),
+    path(
+        "trips/<int:trip_id>/polls/<int:poll_id>/",
+        poll_views.poll_detail,
+        name="poll-detail",
+    ),
+    path(
+        "trips/<int:trip_id>/polls/<int:poll_id>/vote/",
+        poll_views.poll_vote,
+        name="poll-vote",
+    ),
+    path(
+        "trips/<int:trip_id>/polls/<int:poll_id>/close/",
+        poll_views.close_poll,
+        name="poll-close",
     ),
 ]
