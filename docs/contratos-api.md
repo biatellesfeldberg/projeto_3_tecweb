@@ -915,3 +915,68 @@ Os testes HTTP de permissões entre usuários estão em
 exclusão e duplicação de viagens de outra pessoa, acesso a dias e atividades
 alheios (inclusive por meio da URL da própria viagem) e tentativa de criar ou
 mover uma atividade para o dia de outra viagem.
+
+## Amizades e solicitações — S2-01
+
+Todas as rotas exigem `Authorization: Token <token>`.
+
+### Pessoas
+
+`GET /api/users/?search=texto`
+
+Busca por parte do nome ou e-mail completo. Exige pelo menos dois
+caracteres, retorna até 20 usuários ativos e não inclui a própria conta.
+
+Cada resultado contém `id`, `first_name` e `last_name`.
+
+### Amigas
+
+`GET /api/friends/`
+
+Retorna uma lista de pessoas com amizade aceita, contendo:
+`id`, `first_name` e `last_name`.
+
+`DELETE /api/friends/{user_id}/`
+
+Remove a amizade com a pessoa informada. Retorna 204.
+Qualquer uma das duas amigas pode remover a amizade.
+
+### Solicitações
+
+`GET /api/friend-requests/`
+
+Retorna um objeto com as listas `received` e `sent`, contendo somente
+solicitações pendentes.
+
+Cada solicitação contém:
+`id`, `sender`, `recipient`, `status` e `created_at`.
+
+`POST /api/friend-requests/`
+
+Recebe `{"recipient_id": 2}` e retorna a solicitação criada com status 201.
+A remetente é definida pelo token.
+
+`POST /api/friend-requests/{id}/accept/`
+
+Somente a destinatária pode aceitar.
+Retorna 200 com `{"detail": "Solicitação aceita."}`.
+
+`POST /api/friend-requests/{id}/reject/`
+
+Somente a destinatária pode recusar.
+Retorna 204.
+
+`DELETE /api/friend-requests/{id}/`
+
+Somente a remetente pode cancelar uma solicitação pendente.
+Retorna 204.
+
+### Regras
+
+- Não é permitido adicionar a própria conta.
+- Não são permitidas solicitações duplicadas ou em sentidos opostos.
+- Uma amizade aceita impede novas solicitações entre o mesmo par.
+- Recusar, cancelar ou remover exclui o registro; não há histórico.
+- Dados inválidos ou solicitações duplicadas retornam 400.
+- Ações sobre solicitações sem autorização retornam 404.
+- Requisições sem autenticação retornam 401.

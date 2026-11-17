@@ -1,3 +1,59 @@
+from django.conf import settings
 from django.db import models
+from django.db.models.functions import Greatest, Least
 
-# Create your models here.
+
+class Friendship(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pendente"
+        ACCEPTED = "accepted", "Aceita"
+
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_friendships",
+    )
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="received_friendships",
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(
+                    sender=models.F("recipient"),
+                ),
+                name="friendship_no_self",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    status__in=["pending", "accepted"],
+                ),
+                name="friendship_valid_status",
+            ),
+            models.UniqueConstraint(
+                Least("sender", "recipient"),
+                Greatest("sender", "recipient"),
+                name="friendship_unique_pair",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.sender_id} / "
+            f"{self.recipient_id}: {self.status}"
+        )

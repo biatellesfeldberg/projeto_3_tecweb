@@ -12,4 +12,6 @@ urlpatterns = [
     path("api/", include("places.urls")),
 
     path("api/", include("trips.urls")),
+
+    path("api/", include("collaboration.urls")),
 ]
