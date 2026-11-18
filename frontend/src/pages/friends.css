@@ -1,0 +1,138 @@
+.friends-page {
+  display: grid;
+  gap: 24px;
+}
+
+.friends-page .page-heading {
+  margin-bottom: 0;
+}
+
+.friends-page .card {
+  min-width: 0;
+}
+
+.friends-page .card > h2 {
+  margin-bottom: 20px;
+}
+
+.friends-search-form {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.friends-search-form .field {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.friends-search-form > .button {
+  margin-top: 30px;
+}
+
+.friends-search-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #dfe5de;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-ink);
+}
+
+.friends-search-results {
+  margin-top: 20px;
+}
+
+.friends-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.friends-tabs > .button:last-child {
+  margin-left: auto;
+}
+
+.friends-list {
+  display: grid;
+  gap: 14px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.friend-person {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid #e0e5df;
+}
+
+.friend-person:last-child {
+  border-bottom: 0;
+}
+
+.friend-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.friend-identity h3 {
+  margin: 0;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.friend-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.friends-requests-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.friends-page .friends-danger {
+  background: #a6362e;
+  color: white;
+}
+
+.friends-page .friends-danger:hover {
+  background: #842c26;
+}
+
+@media (max-width: 800px) {
+  .friends-requests-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .friends-page .card {
+    padding: 20px;
+  }
+
+  .friends-search-form > .button {
+    margin-top: 0;
+  }
+
+  .friend-identity,
+  .friend-actions {
+    width: 100%;
+  }
+
+  .friends-tabs > .button:last-child {
+    margin-left: 0;
+  }
+}

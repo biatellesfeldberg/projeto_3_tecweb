@@ -16,6 +16,7 @@ import TripsPage from "./pages/TripsPage";
 import NewTripPage from "./pages/NewTripPage";
 import PlacesPage from "./pages/PlacesPage";
 import TripPage from "./pages/TripPage";
+import FriendsPage from "./pages/FriendsPage";
 
 const routes = [
   { path: "/viagens", title: "Minhas viagens" },
@@ -126,6 +127,8 @@ export default function App() {
                 <ProfilePage />
               ) : route.path === "/lugares" ? (
                 <PlacesPage />
+              ) : route.path === "/amigos" ? (
+                <FriendsPage />
               ) : route.path === "/viagens/:tripId" ? (
                 <TripPage key="trip" tab="roteiro" />
               ) : route.path === "/viagens/:tripId/lugares" ? (
