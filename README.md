@@ -38,25 +38,25 @@ Nosso projeto é um site que usa IA para a criação de roteiros de viagem perso
 
 ## Sprint 2 — 16/11 a 19/11/2026
 
-- [ ] [S2-01] Implementar amizades e solicitações no backend
-- [ ] [S2-02] Implementar integrantes e convites de viagem
-- [ ] [S2-03] Implementar e testar permissões colaborativas
-- [ ] [S2-04] Implementar o questionário individual do grupo
-- [ ] [S2-05] Preparar dados de demonstração colaborativa
+- [x] [S2-01] Implementar amizades e solicitações no backend
+- [x] [S2-02] Implementar integrantes e convites de viagem
+- [x] [S2-03] Implementar e testar permissões colaborativas
+- [x] [S2-04] Implementar o questionário individual do grupo
+- [x] [S2-05] Preparar dados de demonstração colaborativa
 - [ ] [S2-06] Conferir permissões no ambiente publicado
-- [ ] [S2-07] Desenvolver a página Amigos
-- [ ] [S2-08] Desenvolver a aba Grupo e as votações
-- [ ] [S2-09] Desenvolver questionário e resultado do destino ideal
+- [x] [S2-07] Desenvolver a página Amigos
+- [x] [S2-08] Desenvolver a aba Grupo e as votações
+- [x] [S2-09] Desenvolver questionário e resultado do destino ideal
 - [ ] [S2-10] Desenvolver o painel de ajuste do roteiro
 - [ ] [S2-11] Revisar responsividade e acessibilidade da interface
 - [ ] [S2-12] Corrigir problemas de usabilidade encontrados nos testes
-- [ ] [S2-13] Implementar a recomendação de destino para o grupo
+- [x] [S2-13] Implementar a recomendação de destino para o grupo
 - [ ] [S2-14] Implementar a calculadora de custo e duração
 - [ ] [S2-15] Implementar o replanejamento e a inclusão de sugestões
 - [ ] [S2-16] Avaliar e melhorar as respostas do Gemini
 - [ ] [S2-17] Documentar um exemplo de IA usada no desenvolvimento
 - [ ] [S2-18] Preparar o roteiro da apresentação e da demonstração
-- [ ] [S2-19] Implementar votações e decisões no backend
+- [x] [S2-19] Implementar votações e decisões no backend
 - [ ] [S2-20] Desenvolver a aba Orçamento e a calculadora
 - [ ] [S2-21] Validar o produto completo e coletar retorno de usuários
 - [ ] [S2-22] Atualizar e verificar o deploy final
