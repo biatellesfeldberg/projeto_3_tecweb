@@ -1,13 +1,20 @@
 from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .calculator import duration_for_budget, estimate_for_duration
 from .itinerary import generate_itinerary, suggest_destinations
-from .models import Trip
+from .replanning import (
+    apply_proposal,
+    compare_day,
+    create_proposal,
+    discard_proposal,
+    is_outdated,
+)
+from .models import ItineraryProposal, Trip
 from .permissions import (
     get_user_activity,
     get_user_day,
@@ -15,6 +22,8 @@ from .permissions import (
     trips_for_user,
     accessible_trips_for_user,
     get_accessible_trip,
+    get_manageable_trip,
+    trip_role,
 )
 from .serializers import (
     ActivitySerializer,
@@ -22,6 +31,7 @@ from .serializers import (
     DestinationSuggestionsSerializer,
     GenerateItinerarySerializer,
     ReorderSerializer,
+    ReplanSerializer,
     TripDaySerializer,
     TripDayUpdateSerializer,
     TripDetailSerializer,
@@ -204,6 +214,168 @@ def trip_cost_calculator(request, trip_id):
         )
 
     return Response(result)
+
+
+# ---------------------------------------------------------------------------
+# Replanejamento (propostas de ajuste do roteiro)
+# ---------------------------------------------------------------------------
+
+
+def _person(user):
+    if user is None:
+        return None
+    name = f"{user.first_name} {user.last_name}".strip()
+    return {"id": user.id, "name": name or user.email}
+
+
+def _proposal_data(proposal, user):
+    trip = proposal.trip
+    content = proposal.proposal
+    pending = proposal.status == ItineraryProposal.Status.PENDING
+    outdated = pending and is_outdated(proposal)
+    role = trip_role(user, trip)
+
+    current_days = {
+        day.id: day
+        for day in trip.days.prefetch_related("activities__day__trip")
+    }
+
+    days = []
+    for proposed in content["days"]:
+        day = current_days.get(proposed["day_id"])
+        current = list(day.activities.all()) if day else []
+        comparison = compare_day(
+            [activity.title for activity in current],
+            [activity["title"] for activity in proposed["activities"]],
+        )
+        days.append({
+            "day_id": proposed["day_id"],
+            "day_number": proposed["day_number"],
+            "date": day.date if day else None,
+            "current_title": day.title if day else "",
+            "proposed_title": proposed["title"],
+            "current": ActivitySerializer(current, many=True).data,
+            "proposed": proposed["activities"],
+            **comparison,
+            "changed": bool(comparison["added"] or comparison["removed"])
+            or (day is not None and proposed["title"] != day.title),
+        })
+
+    return {
+        "id": proposal.id,
+        "trip": trip.id,
+        "status": proposal.status,
+        "request": proposal.request,
+        "place_ids": proposal.place_ids,
+        "created_by": _person(proposal.created_by),
+        "created_at": proposal.created_at,
+        "decided_by": _person(proposal.decided_by),
+        "decided_at": proposal.decided_at,
+        "summary": content.get("summary", ""),
+        "changes": content.get("changes", []),
+        "decisions": content.get("decisions", []),
+        "days": days,
+        "estimates": content.get("estimates", {}),
+        "current_estimate": trip.cost_estimate,
+        "is_outdated": outdated,
+        "can_apply": pending and not outdated and role == "owner",
+        "can_discard": pending
+        and (role == "owner" or proposal.created_by_id == user.id),
+    }
+
+
+def _get_proposal(trip, proposal_id):
+    proposal = trip.proposals.filter(id=proposal_id).first()
+    if proposal is None:
+        raise NotFound()
+    return proposal
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def proposal_list(request, trip_id):
+    # Organizadora e integrantes podem pedir e ver propostas. Só a
+    # organizadora aplica (proposal_apply).
+    trip = get_accessible_trip(request.user, trip_id)
+
+    if request.method == "GET":
+        pending = trip.proposals.filter(
+            status=ItineraryProposal.Status.PENDING
+        ).first()
+        return Response({
+            "proposal": _proposal_data(pending, request.user) if pending else None,
+        })
+
+    serializer = ReplanSerializer(
+        data=request.data,
+        context={"trip": trip, "user": request.user},
+    )
+    serializer.is_valid(raise_exception=True)
+    options = serializer.validated_data
+
+    if not trip.destination:
+        raise ValidationError({
+            "destination": ["Escolha um destino antes de ajustar o roteiro."],
+        })
+
+    if not trip.days.exists():
+        raise ValidationError({
+            "day_ids": ["Esta viagem ainda não tem dias."],
+        })
+
+    proposal = create_proposal(
+        trip,
+        request.user,
+        request=options["request"],
+        places=options["place_ids"],
+        editable_days=options["day_ids"],
+    )
+
+    return Response(
+        _proposal_data(proposal, request.user),
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def proposal_detail(request, trip_id, proposal_id):
+    trip = get_accessible_trip(request.user, trip_id)
+    proposal = _get_proposal(trip, proposal_id)
+    return Response(_proposal_data(proposal, request.user))
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def proposal_apply(request, trip_id, proposal_id):
+    trip = get_manageable_trip(request.user, trip_id)
+    proposal = apply_proposal(_get_proposal(trip, proposal_id), request.user)
+
+    proposal.refresh_from_db()
+    detail = trip_with_itinerary(
+        accessible_trips_for_user(request.user)
+    ).get(id=trip.id)
+
+    return Response({
+        "proposal": _proposal_data(proposal, request.user),
+        "trip": TripDetailSerializer(detail).data,
+    })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def proposal_discard(request, trip_id, proposal_id):
+    trip = get_accessible_trip(request.user, trip_id)
+    proposal = _get_proposal(trip, proposal_id)
+
+    # Integrantes só descartam as propostas que elas mesmas pediram.
+    if trip_role(request.user, trip) != "owner" and (
+        proposal.created_by_id != request.user.id
+    ):
+        raise NotFound()
+
+    proposal = discard_proposal(proposal, request.user)
+    return Response(_proposal_data(proposal, request.user))
 
 
 # ---------------------------------------------------------------------------

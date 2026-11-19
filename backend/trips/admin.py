@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 
-from .models import Activity, Trip, TripDay
+from .models import Activity, ItineraryProposal, Trip, TripDay
 
 
 class TripDayInline(admin.TabularInline):
@@ -61,3 +61,10 @@ class ActivityAdmin(admin.ModelAdmin):
     list_filter = ("category", "cost_type")
     search_fields = ("title", "location_name", "address")
 
+
+@admin.register(ItineraryProposal)
+class ItineraryProposalAdmin(admin.ModelAdmin):
+    list_display = ("id", "trip", "status", "created_by", "created_at")
+    list_filter = ("status",)
+    search_fields = ("trip__title", "request")
+    readonly_fields = ("created_at", "decided_at", "base_fingerprint")

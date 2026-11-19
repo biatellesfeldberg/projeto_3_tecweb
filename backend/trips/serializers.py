@@ -295,3 +295,69 @@ class CostCalculatorSerializer(serializers.Serializer):
             attrs["budget"] = trip.budget
 
         return attrs
+
+
+MAX_PLACES_PER_PROPOSAL = 10
+
+
+class ReplanSerializer(serializers.Serializer):
+    """
+    Pedido de ajuste do roteiro. Recebe no contexto a viagem e a pessoa que
+    pede, para conferir os dias e os lugares enviados.
+    """
+
+    request = serializers.CharField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        default="",
+    )
+    place_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        max_length=MAX_PLACES_PER_PROPOSAL,
+        required=False,
+        default=list,
+    )
+    day_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+    )
+
+    def validate_request(self, value):
+        return value.strip()
+
+    def validate_place_ids(self, value):
+        from places.models import SavedPlace
+
+        ids = list(dict.fromkeys(value))
+        # Só os lugares da própria pessoa. Os de outra pessoa recebem a mesma
+        # mensagem de um lugar inexistente.
+        places = {
+            place.id: place
+            for place in SavedPlace.objects.filter(
+                owner=self.context["user"],
+                id__in=ids,
+            )
+        }
+        if len(places) != len(ids):
+            raise serializers.ValidationError("Lugar não encontrado.")
+        return [places[place_id] for place_id in ids]
+
+    def validate_day_ids(self, value):
+        ids = list(dict.fromkeys(value))
+        if not ids:
+            return None
+        days = list(self.context["trip"].days.filter(id__in=ids))
+        if len(days) != len(ids):
+            raise serializers.ValidationError("Este dia não pertence a esta viagem.")
+        return days
+
+    def validate(self, attrs):
+        if not attrs["request"] and not attrs["place_ids"]:
+            raise serializers.ValidationError({
+                "request": [
+                    "Descreva o que quer mudar ou escolha lugares para incluir."
+                ],
+            })
+        return attrs

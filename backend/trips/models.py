@@ -297,3 +297,68 @@ class Activity(models.Model):
         if self.cost_type == self.CostType.PER_PERSON:
             return self.estimated_cost * self.day.trip.travelers_count
         return self.estimated_cost
+
+
+class ItineraryProposal(models.Model):
+    """
+    Proposta de ajuste do roteiro feita pela IA (issue S2-15).
+
+    Fica guardada à parte: o roteiro da viagem só muda quando a organizadora
+    aplica a proposta. Até lá ela pode ser comparada com o roteiro atual.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Aguardando decisão"
+        APPLIED = "applied", "Aplicada"
+        DISCARDED = "discarded", "Descartada"
+        SUPERSEDED = "superseded", "Substituída por outra proposta"
+
+    trip = models.ForeignKey(
+        Trip,
+        on_delete=models.CASCADE,
+        related_name="proposals",
+        verbose_name="viagem",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="itinerary_proposals",
+        verbose_name="pedida por",
+    )
+    status = models.CharField(
+        "situação",
+        max_length=12,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+
+    request = models.TextField("pedido", blank=True)
+    place_ids = models.JSONField("lugares incluídos", default=list, blank=True)
+    day_ids = models.JSONField("dias que podem mudar", default=list, blank=True)
+
+    # Resposta da IA já validada: resumo, mudanças, dias e estimativas.
+    proposal = models.JSONField("proposta", default=dict)
+
+    # Retrato do roteiro quando a proposta foi gerada. Se o roteiro mudar
+    # depois, a proposta fica desatualizada e não pode mais ser aplicada.
+    base_fingerprint = models.CharField("versão do roteiro", max_length=64)
+
+    created_at = models.DateTimeField("criada em", auto_now_add=True)
+    decided_at = models.DateTimeField("decidida em", null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="decided_itinerary_proposals",
+        verbose_name="decidida por",
+    )
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        verbose_name = "proposta de ajuste do roteiro"
+        verbose_name_plural = "propostas de ajuste do roteiro"
+
+    def __str__(self):
+        return f"Proposta {self.pk} - {self.trip} ({self.status})"

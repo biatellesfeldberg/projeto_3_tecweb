@@ -814,6 +814,178 @@ Erros:
 A primeira chamada (ou com `refresh: true`) pode levar alguns segundos; as
 seguintes respondem na hora.
 
+## Replanejamento do roteiro ✅ (issue S2-15)
+
+Usado no painel **Ajustar roteiro**. O código fica em
+`backend/trips/replanning.py`.
+
+A IA gera uma **proposta** de ajuste. A proposta fica guardada à parte: **o
+roteiro atual não muda até a organizadora aplicar**. Para montar a proposta,
+o backend envia:
+
+- o roteiro atual, dia a dia, marcando quais dias podem mudar;
+- o **pedido** livre (ex.: "Quero um dia em Sintra");
+- os **lugares salvos** escolhidos para entrar no roteiro (inclusão de
+  sugestões);
+- as **decisões do grupo**: votações encerradas, com a opção escolhida, que a
+  IA deve respeitar;
+- os demais lugares da aba Lugares e os dados da viagem (ritmo, orçamento,
+  interesses...).
+
+Só existe **uma proposta pendente por viagem**. Pedir uma nova marca a
+anterior como `superseded`.
+
+### Permissões
+
+| Ação | Organizadora | Integrante aceita | Convite pendente / outra pessoa |
+|---|---|---|---|
+| Ver a proposta pendente | ✅ | ✅ | `404` |
+| Pedir uma proposta | ✅ | ✅ (sugestão para a organizadora) | `404` |
+| Aplicar | ✅ | `404` | `404` |
+| Descartar | ✅ qualquer uma | ✅ só as que ela pediu | `404` |
+
+`place_ids` só aceita os lugares salvos **da própria pessoa** que faz o
+pedido.
+
+### Objeto `Proposal`
+
+```json
+{
+  "id": 7,
+  "trip": 12,
+  "status": "pending",
+  "request": "Quero um dia em Sintra.",
+  "place_ids": [3],
+  "created_by": { "id": 4, "name": "Luana Freitas" },
+  "created_at": "2026-11-19T10:00:00-03:00",
+  "decided_by": null,
+  "decided_at": null,
+  "summary": "Lisboa com um dia em Sintra.",
+  "changes": ["Dia 2: Sintra entrou no lugar do museu, como pedido."],
+  "decisions": [
+    {
+      "category": "restaurant",
+      "title": "Jantar de sexta",
+      "choice": "Cervejaria Ramiro",
+      "reason": "Mais votado"
+    }
+  ],
+  "days": [
+    {
+      "day_id": 31,
+      "day_number": 2,
+      "date": "2027-05-13",
+      "current_title": "Belém",
+      "proposed_title": "Sintra",
+      "current": [ { "id": 90, "title": "Museu do Azulejo", "...": "..." } ],
+      "proposed": [
+        {
+          "title": "Palácio da Pena",
+          "description": "",
+          "category": "culture",
+          "start_time": "10:30:00",
+          "end_time": null,
+          "duration_minutes": 120,
+          "location_name": "Palácio da Pena",
+          "address": "",
+          "latitude": "38.787600",
+          "longitude": "-9.390600",
+          "estimated_cost": "20.00",
+          "cost_type": "per_person",
+          "notes": ""
+        }
+      ],
+      "added": ["Palácio da Pena"],
+      "removed": ["Museu do Azulejo"],
+      "kept": [],
+      "changed": true
+    }
+  ],
+  "estimates": { "transport": "16000.00", "...": "...", "total": "32000.00" },
+  "current_estimate": { "total": "30000.00", "...": "..." },
+  "is_outdated": false,
+  "can_apply": true,
+  "can_discard": true
+}
+```
+
+| Campo | Observação |
+|---|---|
+| `status` | `pending`, `applied`, `discarded` ou `superseded` |
+| `days` | Só os dias que podem mudar. `current` são as atividades atuais (objeto `Activity`); `proposed` são as atividades propostas, ainda sem `id` |
+| `added` / `removed` / `kept` | Títulos que entram, saem ou continuam no dia (sem diferenciar maiúsculas e acentos). `changed` é `false` quando o dia fica igual |
+| `estimates` / `current_estimate` | Estimativa da viagem depois do ajuste (mesmo formato de [`cost_estimate`](#cost_estimate-aba-orçamento)) e a atual |
+| `is_outdated` | `true` quando o roteiro mudou depois da proposta. Nesse caso ela não pode ser aplicada |
+| `can_apply` / `can_discard` | O que a pessoa logada pode fazer agora. Use para mostrar ou esconder os botões |
+
+### `POST /api/trips/{id}/proposals/`: pedir uma proposta
+
+```json
+{
+  "request": "Quero um dia em Sintra e um jantar de frutos do mar.",
+  "place_ids": [3, 8],
+  "day_ids": [31, 32]
+}
+```
+
+| Campo | Padrão | Significado |
+|---|---|---|
+| `request` | `""` | Pedido livre, até 500 caracteres |
+| `place_ids` | `[]` | Até 10 lugares salvos que devem entrar no roteiro |
+| `day_ids` | todos os dias | Dias que a IA pode mudar. Os outros ficam como estão |
+
+É preciso enviar `request` ou pelo menos um lugar em `place_ids`.
+
+Resposta `201`: `Proposal`. **Pode demorar de 10 a 60 segundos.**
+
+Erros:
+
+| Status | Quando | Exemplo de corpo |
+|---|---|---|
+| `400` | Sem pedido e sem lugares | `{"request": ["Descreva o que quer mudar ou escolha lugares para incluir."]}` |
+| `400` | Lugar que não existe ou é de outra pessoa | `{"place_ids": ["Lugar não encontrado."]}` |
+| `400` | Dia de outra viagem | `{"day_ids": ["Este dia não pertence a esta viagem."]}` |
+| `400` | A viagem não tem destino | `{"destination": ["Escolha um destino antes de ajustar o roteiro."]}` |
+| `404` | Sem acesso à viagem | `{"detail": "Não encontrado."}` |
+| `429`, `502`, `503` | Os mesmos da geração de roteiro. A proposta anterior continua valendo | |
+
+A resposta da IA é recusada (`502`) quando falta algum dos dias pedidos,
+quando a estrutura vem errada ou quando nenhum dia tem atividade válida. Os
+campos das atividades são corrigidos como na
+[geração de roteiro](#validação-da-resposta-da-ia). Dias que não foram
+pedidos são ignorados.
+
+### `GET /api/trips/{id}/proposals/`: proposta pendente
+
+Resposta `200`: `{"proposal": Proposal}` ou `{"proposal": null}` quando não há
+proposta pendente.
+
+### `GET /api/trips/{id}/proposals/{proposal_id}/`: ver uma proposta
+
+Resposta `200`: `Proposal` (qualquer situação).
+
+### `POST /api/trips/{id}/proposals/{proposal_id}/apply/`: aplicar
+
+Só a organizadora. Troca as atividades dos dias da proposta (e o título do
+dia), atualiza `ai_summary` e `cost_estimate`, tudo de uma vez.
+
+Resposta `200`:
+
+```json
+{ "proposal": { "status": "applied", "...": "..." }, "trip": { "...": "TripDetail" } }
+```
+
+| Status | Quando |
+|---|---|
+| `404` | Não é a organizadora, ou a proposta é de outra viagem |
+| `409` | A proposta não está mais pendente: `{"detail": "Esta proposta já foi aplicada, descartada ou substituída."}` |
+| `409` | O roteiro mudou depois da proposta: `{"detail": "O roteiro mudou depois que esta proposta foi gerada. Gere uma nova proposta."}` |
+
+### `POST /api/trips/{id}/proposals/{proposal_id}/discard/`: descartar
+
+Resposta `200`: `Proposal` com `status: "discarded"`. O roteiro não muda.
+Erros: `404` sem permissão e `409` se não estiver mais pendente.
+
 ---
 
 ## Lugares salvos ✅ (issue S1-20)
