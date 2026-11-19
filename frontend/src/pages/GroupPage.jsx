@@ -1,4 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
   Link,
@@ -34,7 +38,9 @@ import {
   voteInPoll,
 } from "../services/groups";
 
-import { formatDateRange } from "../utils/itinerary";
+import {
+  formatDateRange,
+} from "../utils/itinerary";
 
 import "./trip.css";
 import "../components/group/group.css";
@@ -94,18 +100,23 @@ function GroupContent({
     setError(null);
 
     Promise.all([
-      getTrip(tripId, {
-        signal: controller.signal,
-      }),
-      listMembers(tripId, {
-        signal: controller.signal,
-      }),
-      listPolls(tripId, {
-        signal: controller.signal,
-      }),
+      getTrip(
+        tripId,
+        { signal: controller.signal },
+      ),
+      listMembers(
+        tripId,
+        { signal: controller.signal },
+      ),
+      listPolls(
+        tripId,
+        { signal: controller.signal },
+      ),
     ])
       .then(([trip, members, polls]) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {
+          return;
+        }
 
         if (
           !trip.id ||
@@ -125,7 +136,9 @@ function GroupContent({
         });
       })
       .catch((failure) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {
+          return;
+        }
 
         if (failure.status === 401) {
           expireSession();
@@ -164,6 +177,7 @@ function GroupContent({
     }
 
     const controller = new AbortController();
+
     actionRef.current = controller;
 
     setBusy(true);
@@ -220,10 +234,11 @@ function GroupContent({
   function replacePoll(updated) {
     setData((current) => ({
       ...current,
-      polls: current.polls.map((poll) =>
-        poll.id === updated.id
-          ? updated
-          : poll,
+      polls: current.polls.map(
+        (poll) =>
+          poll.id === updated.id
+            ? updated
+            : poll,
       ),
     }));
   }
@@ -275,7 +290,8 @@ function GroupContent({
     polls,
   } = data;
 
-  const owner = members.owner.id === user.id;
+  const owner =
+    members.owner.id === user.id;
 
   return (
     <>
@@ -342,6 +358,12 @@ function GroupContent({
       </nav>
 
       <div className="group-page">
+        <ButtonLink
+          to={`/viagens/${trip.id}/destino`}
+        >
+          Responder questionário e ver destino ideal
+        </ButtonLink>
+
         {notice && (
           <Feedback
             kind="success"
@@ -411,9 +433,10 @@ function GroupContent({
                   options,
                 ),
               () =>
-                navigate("/viagens", {
-                  replace: true,
-                }),
+                navigate(
+                  "/viagens",
+                  { replace: true },
+                ),
             )
           }
         />

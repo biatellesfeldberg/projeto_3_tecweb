@@ -1,3 +1,6 @@
+from copy import deepcopy
+from decimal import Decimal
+
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 
@@ -5,24 +8,23 @@ from rest_framework.decorators import (
     api_view,
     permission_classes,
 )
-
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from trips.models import Trip
-
 from trips.permissions import (
     get_accessible_trip,
     get_manageable_trip,
+    trip_participants,
 )
 
-from .destination_serializers import (
-    RecommendationRequestSerializer,
-)
+from .destination_serializers import RecommendationRequestSerializer
 
 from .destinations import (
+    WEIGHTS,
     collect_context,
+    components_for,
     generate_recommendations,
     require_complete,
 )
@@ -39,12 +41,82 @@ class GroupChangedError(APIException):
     )
 
 
-def result_data(record, stale=False):
+def result_data(record, trip):
+    context = collect_context(
+        trip,
+        record.origin_country_code,
+    )
+
+    stale = context["fingerprint"] != record.fingerprint
+    result = None
+
+    if not stale:
+        result = deepcopy(record.result)
+
+        members = list(
+            trip_participants(trip).order_by("pk")
+        )
+
+        if len(members) != len(context["profiles"]):
+            raise GroupChangedError()
+
+        candidates = [
+            result["recommendation"],
+            *result["alternatives"],
+        ]
+
+        for candidate in candidates:
+            features = {
+                **candidate,
+                "cost_max": Decimal(
+                    candidate["estimated_cost_per_person"]["max"]
+                ),
+            }
+
+            individual = []
+
+            for member, profile in zip(
+                members,
+                context["profiles"],
+            ):
+                components = components_for(
+                    profile,
+                    features,
+                    trip,
+                    record.origin_country_code,
+                )
+
+                score = round(
+                    sum(
+                        components[key] * weight
+                        for key, weight in WEIGHTS.items()
+                    ),
+                    1,
+                )
+
+                individual.append({
+                    "user": {
+                        "id": member.pk,
+                        "first_name": member.first_name,
+                        "last_name": member.last_name,
+                    },
+                    "score": score,
+                    "label": (
+                        "high"
+                        if score >= 80
+                        else "medium"
+                        if score >= 60
+                        else "low"
+                    ),
+                })
+
+            candidate["compatibility"]["members"] = individual
+
     return {
         "available": not stale,
         "stale": stale,
         "generated_at": record.generated_at.isoformat(),
-        "result": None if stale else record.result,
+        "result": result,
     }
 
 
@@ -77,20 +149,7 @@ def group_destinations(request, trip_id):
                 "result": None,
             })
 
-        context = collect_context(
-            trip,
-            record.origin_country_code,
-        )
-
-        return Response(
-            result_data(
-                record,
-                stale=(
-                    context["fingerprint"]
-                    != record.fingerprint
-                ),
-            )
-        )
+        return Response(result_data(record, trip))
 
     serializer = RecommendationRequestSerializer(
         data=request.data
@@ -123,7 +182,7 @@ def group_destinations(request, trip_id):
         and record.fingerprint == context["fingerprint"]
         and not serializer.validated_data["refresh"]
     ):
-        return Response(result_data(record))
+        return Response(result_data(record, trip))
 
     result = generate_recommendations(
         trip,
@@ -132,7 +191,6 @@ def group_destinations(request, trip_id):
     )
 
     with transaction.atomic():
-        # A espera pela IA ocorre antes da transação.
         trip = get_object_or_404(
             Trip.objects.select_for_update(),
             pk=trip.pk,
@@ -166,4 +224,4 @@ def group_destinations(request, trip_id):
             )
         )
 
-    return Response(result_data(record))
+    return Response(result_data(record, trip))

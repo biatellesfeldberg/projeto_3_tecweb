@@ -18,6 +18,7 @@ import PlacesPage from "./pages/PlacesPage";
 import TripPage from "./pages/TripPage";
 import FriendsPage from "./pages/FriendsPage";
 import GroupPage from "./pages/GroupPage";
+import DestinationPage from "./pages/DestinationPage";
 
 const routes = [
   { path: "/viagens", title: "Minhas viagens" },
@@ -130,6 +131,8 @@ export default function App() {
                 <PlacesPage />
               ) : route.path === "/amigos" ? (
                 <FriendsPage />
+              ) : route.path === "/viagens/:tripId/destino" ? (
+                <DestinationPage />
               ) : route.path === "/viagens/:tripId/grupo" ? (
                 <GroupPage />
               ) : route.path === "/viagens/:tripId" ? (
