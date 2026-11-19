@@ -245,6 +245,13 @@ function DestinationContent({
 
         <NavLink
           className="tab"
+          to={`/viagens/${trip.id}/orcamento`}
+        >
+          Orçamento
+        </NavLink>
+
+        <NavLink
+          className="tab"
           to={`/viagens/${trip.id}/grupo`}
         >
           Grupo

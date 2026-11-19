@@ -139,6 +139,8 @@ export default function App() {
                 <TripPage key="trip" tab="roteiro" />
               ) : route.path === "/viagens/:tripId/lugares" ? (
                 <TripPage key="trip" tab="lugares" />
+              ) : route.path === "/viagens/:tripId/orcamento" ? (
+                <TripPage key="trip" tab="orcamento" />
               ) : (
                 <></>
               )

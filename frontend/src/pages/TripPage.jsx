@@ -16,6 +16,7 @@ import DayTimeline from "../components/itinerary/DayTimeline";
 import DayNotes from "../components/itinerary/DayNotes";
 import ActivityFormDialog from "../components/itinerary/ActivityFormDialog";
 import TripPlacesTab from "../components/itinerary/TripPlacesTab";
+import BudgetTab from "../components/budget/BudgetTab";
 
 import { useAuth } from "../contexts/AuthContext";
 
@@ -434,7 +435,9 @@ export default function TripPage({ tab = "roteiro" }) {
 
   let content;
 
-  if (tab === "lugares") {
+  if (tab === "orcamento") {
+    content = <BudgetTab trip={trip} />;
+  } else if (tab === "lugares") {
     content = (
       <TripPlacesTab
         trip={trip}
@@ -714,6 +717,15 @@ export default function TripPage({ tab = "roteiro" }) {
           {places.length > 0
             ? ` (${places.length})`
             : ""}
+        </NavLink>
+
+        <NavLink
+          to={`/viagens/${trip.id}/orcamento`}
+          className={({ isActive }) =>
+            `tab ${isActive ? "is-active" : ""}`
+          }
+        >
+          Orçamento
         </NavLink>
 
         <NavLink

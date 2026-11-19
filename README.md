@@ -57,7 +57,7 @@ Nosso projeto é um site que usa IA para a criação de roteiros de viagem perso
 - [ ] [S2-17] Documentar um exemplo de IA usada no desenvolvimento
 - [ ] [S2-18] Preparar o roteiro da apresentação e da demonstração
 - [x] [S2-19] Implementar votações e decisões no backend
-- [ ] [S2-20] Desenvolver a aba Orçamento e a calculadora
+- [x] [S2-20] Desenvolver a aba Orçamento e a calculadora
 - [ ] [S2-21] Validar o produto completo e coletar retorno de usuários
 - [ ] [S2-22] Atualizar e verificar o deploy final
 - [ ] [S2-23] Finalizar a documentação do projeto

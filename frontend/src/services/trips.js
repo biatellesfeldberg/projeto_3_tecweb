@@ -246,6 +246,30 @@ export function suggestDestinations(
   );
 }
 
+// Calculadora da aba Orçamento (issue S2-14).
+// mode "duration": custo para `days` dias. mode "budget": quantos dias
+// cabem em `budget`. Sem days/budget, o backend usa os da viagem.
+// A primeira chamada pede valores de referência à IA e pode demorar.
+export function calculateCosts(
+  tripId,
+  { mode, days, budget, style, refresh = false } = {},
+) {
+  const data = { mode, refresh };
+
+  if (mode === "duration" && days) data.days = Number(days);
+  if (mode === "budget" && budget) data.budget = String(budget);
+  if (style !== undefined) data.style = style;
+
+  if (USE_MOCKS) {
+    return mock.calculateCosts(tripId, data);
+  }
+
+  return apiRequest(`trips/${tripId}/cost-calculator/`, {
+    method: "POST",
+    data,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Requisições reais à API
 // ---------------------------------------------------------------------------
@@ -939,6 +963,115 @@ const mock = {
         (option) =>
           option.destination !== trip.destination,
       ),
+    };
+  },
+
+  // Mesma conta de backend/trips/calculator.py, com valores fixos.
+  async calculateCosts(tripId, data) {
+    await wait(700);
+
+    const trip = findTrip(tripId);
+
+    if (!trip.destination) {
+      throw invalid({
+        destination: "Escolha um destino antes de calcular os custos.",
+      });
+    }
+
+    const travelers = trip.travelers_count;
+    const style = data.style ?? trip.style ?? "";
+    const factor = { economic: 0.7, comfort: 1.6 }[style] || 1;
+
+    const rates = {
+      transport_round_trip: 4000 * travelers * factor,
+      lodging_per_night: 350 * Math.ceil(travelers / 2) * factor,
+      food_per_person_per_day: 150 * factor,
+      activities_per_person_per_day: 80 * factor,
+      local_transport_per_person_per_day: 30 * factor,
+    };
+
+    const cost = (days) => {
+      const categories = {
+        transport:
+          rates.transport_round_trip +
+          rates.local_transport_per_person_per_day * travelers * days,
+        lodging: rates.lodging_per_night * Math.max(days - 1, 0),
+        food: rates.food_per_person_per_day * travelers * days,
+        activities:
+          rates.activities_per_person_per_day * travelers * days,
+      };
+
+      return {
+        categories,
+        total: Object.values(categories).reduce((a, b) => a + b, 0),
+      };
+    };
+
+    let days;
+    let budget = trip.budget === null ? null : Number(trip.budget);
+
+    if (data.mode === "budget") {
+      budget = Number(data.budget ?? trip.budget);
+
+      if (!budget) {
+        throw invalid({
+          budget: "Informe um orçamento ou cadastre um na viagem.",
+        });
+      }
+
+      days = 0;
+      while (days < 60 && cost(days + 1).total <= budget) days += 1;
+    } else {
+      days = Number(data.days) || trip.duration_days;
+    }
+
+    const minimum = cost(1).total;
+    const result = days
+      ? cost(days)
+      : {
+          categories: {
+            transport: 0,
+            lodging: 0,
+            food: 0,
+            activities: 0,
+          },
+          total: 0,
+        };
+
+    const money = (value) => value.toFixed(2);
+
+    return {
+      mode: data.mode,
+      currency: trip.currency,
+      travelers_count: travelers,
+      style,
+      days,
+      nights: Math.max(days - 1, 0),
+      budget: budget === null ? null : money(budget),
+      categories: Object.fromEntries(
+        Object.entries(result.categories).map(([key, value]) => [
+          key,
+          money(value),
+        ]),
+      ),
+      total: money(result.total),
+      per_person: money(result.total / travelers),
+      per_day: days ? money(result.total / days) : null,
+      within_budget:
+        budget === null ? null : days > 0 && result.total <= budget,
+      remaining:
+        budget === null
+          ? null
+          : money(budget - (days ? result.total : minimum)),
+      minimum_cost: money(minimum),
+      max_days_reached: data.mode === "budget" && days === 60,
+      rates: {
+        ...Object.fromEntries(
+          Object.entries(rates).map(([key, value]) => [key, money(value)]),
+        ),
+        notes: "Valores simulados para desenvolvimento.",
+      },
+      rates_generated_at: now(),
     };
   },
 };

@@ -349,6 +349,13 @@ function GroupContent({
         </NavLink>
 
         <NavLink
+          className="tab"
+          to={`/viagens/${trip.id}/orcamento`}
+        >
+          Orçamento
+        </NavLink>
+
+        <NavLink
           className="tab is-active"
           to={`/viagens/${trip.id}/grupo`}
           aria-current="page"

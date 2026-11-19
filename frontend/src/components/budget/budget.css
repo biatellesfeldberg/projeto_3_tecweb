@@ -1,0 +1,258 @@
+/* Aba Orçamento: gastos da viagem e calculadora */
+
+.budget-tab {
+  display: grid;
+  gap: 48px;
+}
+
+.budget-section {
+  display: grid;
+  gap: 20px;
+}
+
+.budget-section .section-heading {
+  margin-bottom: 0;
+}
+
+.budget-card {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+
+  border: 1px solid #e0e5df;
+  border-radius: 10px;
+  background: white;
+}
+
+.budget-card h3 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.budget-note {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Totais */
+
+.budget-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.budget-stat {
+  padding: 18px 20px;
+  border: 1px solid #e0e5df;
+  border-left: 4px solid #c8d3cd;
+  border-radius: 10px;
+  background: white;
+}
+
+.budget-stat--ok {
+  border-left-color: var(--color-rumo);
+}
+
+.budget-stat--over {
+  border-left-color: #a43830;
+}
+
+.budget-stat-label {
+  color: #60716a;
+  font-size: 0.85rem;
+}
+
+.budget-stat-value {
+  margin-top: 4px;
+  color: var(--color-ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.budget-stat-detail {
+  margin-top: 2px;
+  color: #65736f;
+  font-size: 0.85rem;
+}
+
+.budget-status {
+  margin: 0;
+  font-weight: 700;
+}
+
+.budget-status--ok {
+  color: var(--color-rumo);
+}
+
+.budget-status--over {
+  color: #a43830;
+}
+
+/* Categorias */
+
+.budget-categories {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budget-category {
+  display: grid;
+  gap: 6px;
+}
+
+.budget-category-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.budget-category-name {
+  font-weight: 700;
+}
+
+.budget-category-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-bar {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-sage);
+}
+
+.budget-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-rumo);
+  transition: width 0.3s ease;
+}
+
+.budget-bar-fill--lodging {
+  background: #3f7f73;
+}
+
+.budget-bar-fill--food {
+  background: #bc6b3e;
+}
+
+.budget-bar-fill--activities {
+  background: #6b8f3e;
+}
+
+/* Calculadora */
+
+.budget-form {
+  gap: 22px;
+}
+
+.budget-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.budget-modes legend {
+  margin-bottom: 10px;
+  padding: 0;
+  color: #60716a;
+  font-size: 0.85rem;
+}
+
+.budget-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+
+  border: 1px solid #dfe5de;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.budget-mode.is-active {
+  border-color: var(--color-rumo);
+  background: #f1f5ef;
+}
+
+.budget-mode input {
+  margin-top: 5px;
+  accent-color: var(--color-rumo);
+}
+
+.budget-mode > span {
+  display: grid;
+  gap: 2px;
+}
+
+.budget-mode .muted {
+  font-size: 0.85rem;
+}
+
+.budget-form-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.budget-form-fields .muted {
+  font-size: 0.85rem;
+}
+
+/* Valores de referência */
+
+.budget-rates {
+  padding-top: 14px;
+  border-top: 1px solid #e0e5df;
+}
+
+.budget-rates summary {
+  color: var(--color-rumo);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.budget-rates[open] {
+  display: grid;
+  gap: 12px;
+}
+
+.budget-rates dl {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+
+.budget-rates dl div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.budget-rates dt {
+  color: #60716a;
+}
+
+.budget-rates dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-rates .button {
+  justify-self: start;
+}
