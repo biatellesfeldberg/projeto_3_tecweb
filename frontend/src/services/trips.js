@@ -270,6 +270,60 @@ export function calculateCosts(
   });
 }
 
+// Ajuste do roteiro (issue S2-15). A proposta fica guardada à parte e o
+// roteiro só muda em applyProposal. Pedir uma proposta pode demorar.
+
+// Devolve a proposta pendente da viagem ou null.
+export async function getPendingProposal(tripId, { signal } = {}) {
+  if (USE_MOCKS) {
+    return mock.getPendingProposal(tripId);
+  }
+
+  const data = await apiRequest(`trips/${tripId}/proposals/`, { signal });
+  return data.proposal;
+}
+
+export function createProposal(
+  tripId,
+  { request = "", placeIds = [], dayIds = [] } = {},
+) {
+  const data = {
+    request,
+    place_ids: placeIds,
+    day_ids: dayIds,
+  };
+
+  if (USE_MOCKS) {
+    return mock.createProposal(tripId, data);
+  }
+
+  return apiRequest(`trips/${tripId}/proposals/`, {
+    method: "POST",
+    data,
+  });
+}
+
+// Devolve { proposal, trip }, com o roteiro já atualizado.
+export function applyProposal(tripId, proposalId) {
+  if (USE_MOCKS) {
+    return mock.applyProposal(tripId, proposalId);
+  }
+
+  return apiRequest(`trips/${tripId}/proposals/${proposalId}/apply/`, {
+    method: "POST",
+  });
+}
+
+export function discardProposal(tripId, proposalId) {
+  if (USE_MOCKS) {
+    return mock.discardProposal(tripId, proposalId);
+  }
+
+  return apiRequest(`trips/${tripId}/proposals/${proposalId}/discard/`, {
+    method: "POST",
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Requisições reais à API
 // ---------------------------------------------------------------------------
@@ -364,6 +418,7 @@ function messages(value) {
 
 const db = {
   trips: structuredClone(mockTrips),
+  proposals: [],
   nextId: 5000,
 };
 
@@ -424,6 +479,17 @@ function findActivity(trip, activityId) {
   }
 
   throw notFound();
+}
+
+// Atividade do roteiro no formato de uma atividade proposta (sem id).
+function proposedActivity(activity) {
+  const proposed = { ...activity };
+
+  for (const field of ["id", "day", "total_cost", "order", "image_url"]) {
+    delete proposed[field];
+  }
+
+  return proposed;
 }
 
 function summary(trip) {
@@ -1073,5 +1139,158 @@ const mock = {
       },
       rates_generated_at: now(),
     };
+  },
+  // Proposta simulada: troca a última atividade de cada dia escolhido.
+  async getPendingProposal(tripId) {
+    await wait(200);
+    findTrip(tripId);
+    const proposal = db.proposals.find(
+      (item) => item.trip === Number(tripId) && item.status === "pending",
+    );
+    return proposal ? copy(proposal) : null;
+  },
+
+  async createProposal(tripId, data) {
+    await wait(1200);
+
+    const trip = findTrip(tripId);
+
+    if (!data.request.trim() && data.place_ids.length === 0) {
+      throw invalid({
+        request: "Descreva o que quer mudar ou escolha lugares para incluir.",
+      });
+    }
+
+    const chosen = data.day_ids.length
+      ? trip.days.filter((day) => data.day_ids.includes(day.id))
+      : trip.days;
+
+    db.proposals.forEach((item) => {
+      if (item.trip === trip.id && item.status === "pending") {
+        item.status = "superseded";
+      }
+    });
+
+    const days = chosen.map((day) => {
+      const kept = day.activities.slice(0, -1);
+      const removed = day.activities.slice(-1).map((item) => item.title);
+      const extra = {
+        title: "Passeio sugerido pela IA",
+        description: data.request,
+        category: "sightseeing",
+        start_time: "16:00:00",
+        end_time: null,
+        duration_minutes: 90,
+        location_name: trip.destination,
+        address: "",
+        latitude: null,
+        longitude: null,
+        estimated_cost: "0.00",
+        cost_type: "per_person",
+        notes: "",
+      };
+
+      return {
+        day_id: day.id,
+        day_number: day.day_number,
+        date: day.date,
+        current_title: day.title,
+        proposed_title: day.title || `Dia ${day.day_number}`,
+        current: copy(day.activities),
+        proposed: [...kept.map(proposedActivity), extra],
+        added: [extra.title],
+        removed,
+        kept: kept.map((item) => item.title),
+        changed: true,
+      };
+    });
+
+    const proposal = {
+      id: db.nextId++,
+      trip: trip.id,
+      status: "pending",
+      request: data.request,
+      place_ids: data.place_ids,
+      created_by: { id: 1, name: "Você" },
+      created_at: now(),
+      decided_by: null,
+      decided_at: null,
+      summary: "Proposta simulada para desenvolvimento.",
+      changes: ["Um passeio novo entrou no fim de cada dia escolhido."],
+      decisions: [],
+      days,
+      estimates: copy(trip.cost_estimate || {}),
+      current_estimate: copy(trip.cost_estimate || {}),
+      is_outdated: false,
+      can_apply: true,
+      can_discard: true,
+    };
+
+    db.proposals.push(proposal);
+    return copy(proposal);
+  },
+
+  async applyProposal(tripId, proposalId) {
+    await wait(500);
+
+    const trip = findTrip(tripId);
+    const proposal = db.proposals.find(
+      (item) => item.id === Number(proposalId) && item.trip === trip.id,
+    );
+
+    if (!proposal) throw notFound();
+    if (proposal.status !== "pending") {
+      throw new ApiError(
+        "Esta proposta já foi aplicada, descartada ou substituída.",
+        {},
+        409,
+      );
+    }
+
+    for (const proposed of proposal.days) {
+      const day = findDay(trip, proposed.day_id);
+      day.title = proposed.proposed_title;
+      day.activities = proposed.proposed.map((activity, index) => ({
+        ...activity,
+        id: db.nextId++,
+        day: day.id,
+        order: index + 1,
+        image_url: "",
+        total_cost: (
+          Number(activity.estimated_cost) *
+          (activity.cost_type === "total" ? 1 : trip.travelers_count)
+        ).toFixed(2),
+      }));
+    }
+
+    trip.ai_summary = proposal.summary;
+    Object.assign(proposal, {
+      status: "applied",
+      decided_at: now(),
+      can_apply: false,
+      can_discard: false,
+    });
+
+    return { proposal: copy(proposal), trip: copy(trip) };
+  },
+
+  async discardProposal(tripId, proposalId) {
+    await wait(300);
+
+    const proposal = db.proposals.find(
+      (item) =>
+        item.id === Number(proposalId) && item.trip === Number(tripId),
+    );
+
+    if (!proposal) throw notFound();
+
+    Object.assign(proposal, {
+      status: "discarded",
+      decided_at: now(),
+      can_apply: false,
+      can_discard: false,
+    });
+
+    return copy(proposal);
   },
 };

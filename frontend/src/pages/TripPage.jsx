@@ -17,6 +17,7 @@ import DayNotes from "../components/itinerary/DayNotes";
 import ActivityFormDialog from "../components/itinerary/ActivityFormDialog";
 import TripPlacesTab from "../components/itinerary/TripPlacesTab";
 import BudgetTab from "../components/budget/BudgetTab";
+import ReplanPanel from "../components/replan/ReplanPanel";
 
 import { useAuth } from "../contexts/AuthContext";
 
@@ -24,6 +25,7 @@ import {
   createActivity,
   deleteActivity,
   generateItinerary,
+  getPendingProposal,
   getTrip,
   reorderActivities,
   updateActivity,
@@ -73,6 +75,9 @@ export default function TripPage({ tab = "roteiro" }) {
   const [generationError, setGenerationError] = useState("");
 
   const generatingRef = useRef(false);
+
+  const [replanOpen, setReplanOpen] = useState(false);
+  const [hasPendingProposal, setHasPendingProposal] = useState(false);
 
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -140,6 +145,26 @@ export default function TripPage({ tab = "roteiro" }) {
 
     return () => controller.abort();
   }, [userId, tripId, placesRetry, expireSession]);
+
+  // Avisa quando há uma proposta de ajuste esperando decisão (por exemplo,
+  // pedida por uma integrante do grupo).
+  useEffect(() => {
+    if (!userId || tab !== "roteiro" || replanOpen) return;
+
+    const controller = new AbortController();
+
+    getPendingProposal(tripId, { signal: controller.signal })
+      .then((proposal) => {
+        if (!controller.signal.aborted) {
+          setHasPendingProposal(Boolean(proposal));
+        }
+      })
+      .catch(() => {
+        // O aviso é opcional: se falhar, o painel continua acessível.
+      });
+
+    return () => controller.abort();
+  }, [userId, tripId, tab, replanOpen]);
 
   const days = trip?.days || [];
   const requested = Number(params.get("dia"));
@@ -471,6 +496,30 @@ export default function TripPage({ tab = "roteiro" }) {
   } else {
     content = (
       <>
+        {replanOpen ? (
+          <ReplanPanel
+            trip={trip}
+            places={places}
+            onApplied={setTrip}
+            onClose={() => setReplanOpen(false)}
+          />
+        ) : (
+          hasPendingProposal && (
+            <Feedback
+              kind="info"
+              title="Há uma proposta de ajuste do roteiro aguardando decisão."
+              detail="Compare com o roteiro atual antes de aplicar ou descartar."
+            >
+              <Button
+                variant="secondary"
+                onClick={() => setReplanOpen(true)}
+              >
+                Ver proposta
+              </Button>
+            </Feedback>
+          )
+        )}
+
         <div className="day-heading">
           <div>
             <h2>{formatDayLong(day.date)}</h2>
@@ -483,19 +532,30 @@ export default function TripPage({ tab = "roteiro" }) {
             </p>
           </div>
 
-          <Button
-            variant="secondary"
-            onClick={() =>
-              setDialog({
-                type: "activity",
-                initial: {
-                  day: String(day.id),
-                },
-              })
-            }
-          >
-            + Adicionar atividade
-          </Button>
+          <div className="day-heading-actions">
+            {trip.destination && total > 0 && !replanOpen && (
+              <Button
+                variant="ghost"
+                onClick={() => setReplanOpen(true)}
+              >
+                Ajustar roteiro com IA
+              </Button>
+            )}
+
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setDialog({
+                  type: "activity",
+                  initial: {
+                    day: String(day.id),
+                  },
+                })
+              }
+            >
+              + Adicionar atividade
+            </Button>
+          </div>
         </div>
 
         <nav

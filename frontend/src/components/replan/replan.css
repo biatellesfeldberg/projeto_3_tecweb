@@ -1,0 +1,273 @@
+/* Painel "Ajustar roteiro" */
+
+.replan-panel {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 28px;
+  padding: 24px;
+
+  border: 1px solid #cfdad4;
+  border-radius: 12px;
+  background: white;
+}
+
+.replan-panel .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.replan-panel-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.replan-panel-heading h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.replan-panel-heading h2:focus {
+  outline: none;
+}
+
+.replan-panel .feedback {
+  margin: 0;
+}
+
+.replan-hint {
+  font-size: 0.85rem;
+}
+
+/* Formulário */
+
+.replan-form {
+  display: grid;
+  gap: 20px;
+}
+
+.replan-form textarea {
+  resize: vertical;
+}
+
+.replan-fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.replan-fieldset legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: #60716a;
+  font-size: 0.85rem;
+}
+
+.replan-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.replan-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+
+  border: 1px solid #dfe5de;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.replan-option:has(input:checked) {
+  border-color: var(--color-rumo);
+  background: #f1f5ef;
+}
+
+.replan-option input {
+  margin-top: 5px;
+  accent-color: var(--color-rumo);
+}
+
+.replan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Proposta */
+
+.replan-proposal {
+  display: grid;
+  gap: 16px;
+}
+
+.replan-proposal-heading h3,
+.replan-day-heading h4 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+.replan-proposal-heading h3 {
+  font-size: 1.35rem;
+}
+
+.replan-proposal-heading p {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.replan-changes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.replan-decisions {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--color-sage);
+}
+
+.replan-decisions ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.replan-estimate {
+  font-variant-numeric: tabular-nums;
+}
+
+.replan-up {
+  color: #a43830;
+}
+
+.replan-down {
+  color: var(--color-rumo);
+}
+
+.replan-days {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.replan-day {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+
+  border: 1px solid #e0e5df;
+  border-radius: 10px;
+}
+
+.replan-day.is-unchanged {
+  background: #fafbf8;
+}
+
+.replan-day-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.replan-day-heading h4 {
+  font-size: 1.1rem;
+}
+
+.replan-day-heading p {
+  font-size: 0.85rem;
+}
+
+.replan-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.replan-column-label {
+  margin-bottom: 6px;
+  color: #60716a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.replan-activities {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.replan-activity {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.replan-activity.is-added {
+  background: #e6f0e8;
+}
+
+.replan-activity.is-removed {
+  background: #f7e7e4;
+}
+
+.replan-activity.is-removed .replan-activity-title {
+  text-decoration: line-through;
+}
+
+.replan-activity-time {
+  color: #65736f;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.replan-activity-title {
+  overflow-wrap: anywhere;
+}
+
+.replan-activity-category {
+  display: block;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.replan-mark {
+  margin-right: 6px;
+  font-weight: 700;
+}
+
+.replan-empty-day {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .replan-panel {
+    padding: 18px 16px;
+  }
+
+  .replan-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

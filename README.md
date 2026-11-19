@@ -47,7 +47,7 @@ Nosso projeto é um site que usa IA para a criação de roteiros de viagem perso
 - [x] [S2-07] Desenvolver a página Amigos
 - [x] [S2-08] Desenvolver a aba Grupo e as votações
 - [x] [S2-09] Desenvolver questionário e resultado do destino ideal
-- [ ] [S2-10] Desenvolver o painel de ajuste do roteiro
+- [x] [S2-10] Desenvolver o painel de ajuste do roteiro
 - [ ] [S2-11] Revisar responsividade e acessibilidade da interface
 - [ ] [S2-12] Corrigir problemas de usabilidade encontrados nos testes
 - [x] [S2-13] Implementar a recomendação de destino para o grupo

@@ -48,6 +48,12 @@
   margin: 4px 0 0;
 }
 
+.day-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 /* Dias */
 
 .day-chips {
