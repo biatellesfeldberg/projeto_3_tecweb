@@ -701,6 +701,119 @@ destino e gera o roteiro:
 
 Erros: os mesmos `404`, `429`, `502` e `503` da geração de roteiro.
 
+### `POST /api/trips/{id}/cost-calculator/`: calculadora de custo e duração ✅ (issue S2-14)
+
+Usada na aba **Orçamento**. Tem dois modos:
+
+- `duration`: **custo estimado para uma duração** ("Quanto custa ficar 7 dias?");
+- `budget`: **duração possível para um orçamento** ("Quantos dias cabem em R$ 20.000?").
+
+O código fica em `backend/trips/calculator.py`. A IA informa apenas os
+**valores de referência** do destino (passagem, diária de hospedagem e gastos
+diários por pessoa). As contas de cada modo são feitas pelo backend, então o
+mesmo pedido sempre dá o mesmo resultado.
+
+Os valores de referência ficam guardados na viagem e são reaproveitados
+enquanto destino, origem, número de viajantes, moeda, estilo, transporte e
+mês de início não mudarem. Por isso, mudar só os dias ou o orçamento
+responde na hora, sem nova chamada à IA. Quando a viagem já tem roteiro
+gerado, a estimativa do roteiro (`cost_estimate`) é enviada à IA para manter
+os valores coerentes.
+
+Pode ser usada pela organizadora e pelas **integrantes aceitas**. Não altera
+as datas, o orçamento nem o roteiro da viagem.
+
+Requisição:
+
+```json
+{ "mode": "duration", "days": 7 }
+```
+
+```json
+{ "mode": "budget", "budget": "20000.00", "style": "economic" }
+```
+
+| Campo | Obrigatório | Padrão | Significado |
+|---|---|---|---|
+| `mode` | sim | | `duration` ou `budget` |
+| `days` | não | `duration_days` da viagem | Só no modo `duration`. De 1 a 60 |
+| `budget` | não | `budget` da viagem | Só no modo `budget`. Maior que zero. Se a viagem não tiver orçamento, é obrigatório |
+| `style` | não | `style` da viagem | Simula outro [estilo](#estilo-style) sem alterar a viagem |
+| `refresh` | não | `false` | `true` pede novos valores de referência à IA |
+
+Resposta `200`:
+
+```json
+{
+  "mode": "budget",
+  "currency": "BRL",
+  "travelers_count": 4,
+  "style": "intermediate",
+  "days": 10,
+  "nights": 9,
+  "budget": "32000.00",
+  "categories": {
+    "transport": "17200.00",
+    "lodging": "5400.00",
+    "food": "6000.00",
+    "activities": "3200.00"
+  },
+  "total": "31800.00",
+  "per_person": "7950.00",
+  "per_day": "3180.00",
+  "within_budget": true,
+  "remaining": "200.00",
+  "minimum_cost": "17040.00",
+  "max_days_reached": false,
+  "rates": {
+    "transport_round_trip": "16000.00",
+    "lodging_per_night": "600.00",
+    "food_per_person_per_day": "150.00",
+    "activities_per_person_per_day": "80.00",
+    "local_transport_per_person_per_day": "30.00",
+    "notes": "Valores de média temporada."
+  },
+  "rates_generated_at": "2026-11-19T11:53:00.000000+00:00"
+}
+```
+
+| Campo | Observação |
+|---|---|
+| `days` / `nights` | No modo `budget`, é a maior duração que cabe no orçamento (`0` se nem um dia couber). Noites = dias − 1 |
+| `categories` | Custo do **grupo** por categoria, nas mesmas chaves de `cost_estimate`. `transport` = passagem de ida e volta + transporte local |
+| `total`, `per_person`, `per_day` | `total` é a soma das categorias. `per_day` é `null` quando `days` é `0` |
+| `budget` | O orçamento enviado ou, se não foi enviado, o da viagem (`null` se não houver) |
+| `within_budget` | `true`/`false` comparando com `budget`; `null` sem orçamento |
+| `remaining` | `budget − total`. Negativo quando passa do orçamento. Se `days` for `0`, mostra quanto falta para a viagem mínima de 1 dia |
+| `minimum_cost` | Custo de uma viagem de 1 dia (só a passagem e os gastos de um dia) |
+| `max_days_reached` | `true` quando o orçamento daria para mais de 60 dias (limite de uma viagem) |
+| `rates` | Valores de referência usados. `transport_round_trip` e `lodging_per_night` são do grupo todo; os demais são por pessoa por dia |
+
+Como as contas são feitas:
+
+```
+custo(dias) = passagem ida e volta
+            + diária de hospedagem × (dias − 1)
+            + (alimentação + atividades + transporte local) × viajantes × dias
+```
+
+Validação da resposta da IA: se faltar algum valor, vier negativo ou em
+formato errado, ou se hospedagem ou alimentação vierem zeradas, a resposta é
+recusada (`502`) e os valores guardados anteriormente são mantidos.
+
+Erros:
+
+| Status | Quando | Exemplo de corpo |
+|---|---|---|
+| `400` | A viagem não tem destino | `{"destination": ["Escolha um destino antes de calcular os custos."]}` |
+| `400` | Modo `budget` sem orçamento enviado nem cadastrado | `{"budget": ["Informe um orçamento ou cadastre um na viagem."]}` |
+| `400` | `mode`, `days`, `budget` ou `style` inválidos | `{"days": ["Certifique-se de que este valor seja inferior ou igual a 60."]}` |
+| `404` | A viagem não existe, é de outra pessoa ou o convite ainda não foi aceito | `{"detail": "Não encontrado."}` |
+| `429`, `502`, `503` | Os mesmos da geração de roteiro | |
+
+A primeira chamada (ou com `refresh: true`) pode levar alguns segundos; as
+seguintes respondem na hora.
+
 ---
 
 ## Lugares salvos ✅ (issue S1-20)

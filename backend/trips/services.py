@@ -95,6 +95,7 @@ def duplicate_trip(trip):
         "lodging_suggestions",
         "cost_estimate",
         "itinerary_generated_at",
+        "cost_rates",
     ]
 
     suffix = " (cópia)"

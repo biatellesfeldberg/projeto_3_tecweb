@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from accounts.models import User
@@ -240,3 +242,56 @@ class ReorderSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         allow_empty=True,
     )
+
+
+class CostCalculatorSerializer(serializers.Serializer):
+    """
+    Pedido da calculadora. Recebe a viagem no contexto para usar a duração
+    e o orçamento dela quando os campos não forem enviados.
+    """
+
+    class Mode:
+        DURATION = "duration"
+        BUDGET = "budget"
+        CHOICES = [
+            (DURATION, "Custo estimado para uma duração"),
+            (BUDGET, "Duração possível para um orçamento"),
+        ]
+
+    mode = serializers.ChoiceField(choices=Mode.CHOICES)
+    days = serializers.IntegerField(
+        min_value=1,
+        max_value=MAX_TRIP_DAYS,
+        required=False,
+    )
+    budget = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+    )
+    style = serializers.ChoiceField(
+        choices=Trip.Style.choices,
+        required=False,
+        allow_blank=True,
+    )
+    refresh = serializers.BooleanField(default=False)
+
+    def validate(self, attrs):
+        trip = self.context["trip"]
+
+        if "style" not in attrs:
+            attrs["style"] = trip.style
+
+        if attrs["mode"] == self.Mode.DURATION:
+            attrs.setdefault("days", trip.duration_days)
+        elif "budget" not in attrs:
+            if trip.budget is None or trip.budget <= 0:
+                raise serializers.ValidationError({
+                    "budget": [
+                        "Informe um orçamento ou cadastre um na viagem."
+                    ],
+                })
+            attrs["budget"] = trip.budget
+
+        return attrs

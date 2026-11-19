@@ -5,6 +5,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .calculator import duration_for_budget, estimate_for_duration
 from .itinerary import generate_itinerary, suggest_destinations
 from .models import Trip
 from .permissions import (
@@ -17,6 +18,7 @@ from .permissions import (
 )
 from .serializers import (
     ActivitySerializer,
+    CostCalculatorSerializer,
     DestinationSuggestionsSerializer,
     GenerateItinerarySerializer,
     ReorderSerializer,
@@ -165,6 +167,43 @@ def trip_destination_suggestions(request, trip_id):
     )
 
     return Response({"suggestions": suggestions})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def trip_cost_calculator(request, trip_id):
+    # Só faz contas e guarda os valores de referência da IA, sem mudar o
+    # roteiro. Por isso integrantes da viagem também podem usar.
+    trip = get_accessible_trip(request.user, trip_id)
+
+    serializer = CostCalculatorSerializer(
+        data=request.data,
+        context={"trip": trip},
+    )
+    serializer.is_valid(raise_exception=True)
+    options = serializer.validated_data
+
+    if not trip.destination:
+        raise ValidationError({
+            "destination": ["Escolha um destino antes de calcular os custos."],
+        })
+
+    if options["mode"] == CostCalculatorSerializer.Mode.DURATION:
+        result = estimate_for_duration(
+            trip,
+            options["days"],
+            options["style"],
+            refresh=options["refresh"],
+        )
+    else:
+        result = duration_for_budget(
+            trip,
+            options["budget"],
+            options["style"],
+            refresh=options["refresh"],
+        )
+
+    return Response(result)
 
 
 # ---------------------------------------------------------------------------

@@ -101,6 +101,12 @@ class Trip(models.Model):
         "roteiro gerado em", null=True, blank=True
     )
 
+    # Valores de referência da calculadora de custo e duração
+    # (trips/calculator.py), guardados para não chamar a IA a cada cálculo.
+    cost_rates = models.JSONField(
+        "valores de referência de custo", default=dict, blank=True
+    )
+
     created_at = models.DateTimeField("criado em", auto_now_add=True)
     updated_at = models.DateTimeField("atualizado em", auto_now=True)
 

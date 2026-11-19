@@ -30,6 +30,11 @@ urlpatterns = [
         name="trip-destination-suggestions",
     ),
     path(
+        "trips/<int:trip_id>/cost-calculator/",
+        views.trip_cost_calculator,
+        name="trip-cost-calculator",
+    ),
+    path(
         "trips/<int:trip_id>/days/<int:day_id>/",
         views.day_detail,
         name="trip-day-detail",
