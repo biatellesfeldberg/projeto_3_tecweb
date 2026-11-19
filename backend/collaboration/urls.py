@@ -1,9 +1,18 @@
 from django.urls import path
 
-from . import views, poll_views
+from . import (
+    destination_views,
+    poll_views,
+    views,
+)
 
 
 urlpatterns = [
+    path(
+        "trips/<int:trip_id>/group-destinations/",
+        destination_views.group_destinations,
+        name="group-destinations",
+    ),
     path(
         "users/",
         views.user_search,
@@ -39,11 +48,10 @@ urlpatterns = [
         views.reject_friend_request,
         name="friend-request-reject",
     ),
-
     path(
-    "trips/<int:trip_id>/members/",
-    views.trip_members,
-    name="trip-members",
+        "trips/<int:trip_id>/members/",
+        views.trip_members,
+        name="trip-members",
     ),
     path(
         "trips/<int:trip_id>/members/<int:user_id>/",
@@ -70,7 +78,6 @@ urlpatterns = [
         views.reject_trip_invitation,
         name="trip-invitation-reject",
     ),
-
     path(
         "trips/<int:trip_id>/questionnaire/me/",
         views.my_trip_questionnaire,
@@ -81,7 +88,6 @@ urlpatterns = [
         views.trip_questionnaire_progress,
         name="trip-questionnaire-progress",
     ),
-
     path(
         "trips/<int:trip_id>/polls/",
         poll_views.trip_polls,

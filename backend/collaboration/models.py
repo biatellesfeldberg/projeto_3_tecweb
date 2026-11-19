@@ -1,10 +1,9 @@
-from django.conf import settings
-from django.db import models
-from django.db.models.functions import Greatest, Least
-
 from decimal import Decimal
 
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.db.models.functions import Greatest, Least
 
 
 class Friendship(models.Model):
@@ -256,25 +255,32 @@ class TripPoll(models.Model):
         on_delete=models.CASCADE,
         related_name="polls",
     )
+
     title = models.CharField(max_length=150)
+
     category = models.CharField(
         max_length=15,
         choices=Category.choices,
     )
+
     status = models.CharField(
         max_length=10,
         choices=Status.choices,
         default=Status.OPEN,
     )
+
     decision = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at", "-id"]
+
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(status__in=["open", "closed"]),
+                condition=models.Q(
+                    status__in=["open", "closed"],
+                ),
                 name="poll_valid_status",
             ),
         ]
@@ -286,10 +292,12 @@ class PollOption(models.Model):
         on_delete=models.CASCADE,
         related_name="options",
     )
+
     label = models.CharField(max_length=150)
 
     class Meta:
         ordering = ["id"]
+
         constraints = [
             models.UniqueConstraint(
                 fields=["poll", "label"],
@@ -304,16 +312,19 @@ class PollVote(models.Model):
         on_delete=models.CASCADE,
         related_name="votes",
     )
+
     option = models.ForeignKey(
         PollOption,
         on_delete=models.CASCADE,
         related_name="votes",
     )
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="poll_votes",
     )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -323,3 +334,16 @@ class PollVote(models.Model):
                 name="unique_vote_per_poll_user",
             ),
         ]
+
+
+class GroupDestinationRecommendation(models.Model):
+    trip = models.OneToOneField(
+        "trips.Trip",
+        on_delete=models.CASCADE,
+        related_name="group_destination_recommendation",
+    )
+
+    fingerprint = models.CharField(max_length=64)
+    origin_country_code = models.CharField(max_length=2)
+    result = models.JSONField(default=dict)
+    generated_at = models.DateTimeField(auto_now=True)
