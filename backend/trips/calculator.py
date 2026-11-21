@@ -18,6 +18,7 @@ Fluxo:
 
 import hashlib
 import json
+import unicodedata
 from decimal import ROUND_FLOOR, Decimal
 
 from django.utils import timezone
@@ -122,9 +123,15 @@ def build_rates_prompt(trip, style):
         f"{_itinerary_reference(trip)}"
         "\nComo montar a resposta (todos os valores na moeda informada, "
         "como números, sem símbolo):\n"
+        "- Use preços médios de mercado para o mês da viagem (nem promoções, "
+        "nem os valores mais altos), para que o mesmo pedido gere sempre "
+        "valores parecidos.\n"
         "- transport_round_trip: custo total de ida e volta entre a origem e "
-        "o destino para TODO o grupo, no transporte principal informado. Use "
-        "0 apenas se origem e destino forem a mesma cidade.\n"
+        "o destino para TODO o grupo, no transporte principal informado. Para "
+        "avião, ônibus ou trem, é o preço de uma passagem multiplicado pelo "
+        "número de viajantes. Para carro, é o combustível e os pedágios da ida "
+        "e da volta (um carro para até 4 pessoas). Use 0 apenas se origem e "
+        "destino forem a mesma cidade.\n"
         "- lodging_per_night: preço de uma noite de hospedagem para TODO o "
         "grupo (considere quantos quartos são necessários), compatível com o "
         "estilo.\n"
@@ -138,7 +145,18 @@ def build_rates_prompt(trip, style):
     )
 
 
-def parse_rates(data):
+def _city(place):
+    """Só a cidade, sem acentos nem maiúsculas: "São Paulo, Brasil" -> "sao paulo"."""
+    text = unicodedata.normalize("NFKD", (place or "").split(",")[0])
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return " ".join(text.lower().split())
+
+
+def same_city(trip):
+    return bool(_city(trip.origin)) and _city(trip.origin) == _city(trip.destination)
+
+
+def parse_rates(data, trip=None):
     """Valida os valores da IA. Levanta GeminiInvalidResponseError se faltar algo."""
     if not isinstance(data, dict):
         raise GeminiInvalidResponseError()
@@ -151,6 +169,11 @@ def parse_rates(data):
         rates[field] = value
 
     if any(rates[field] <= 0 for field in REQUIRED_POSITIVE_RATES):
+        raise GeminiInvalidResponseError()
+
+    # Passagem zerada só faz sentido quando origem e destino são a mesma
+    # cidade. Em outros casos o total da viagem ficaria baixo demais.
+    if trip is not None and rates["transport_round_trip"] == 0 and not same_city(trip):
         raise GeminiInvalidResponseError()
 
     return {
@@ -182,7 +205,7 @@ def get_cost_rates(trip, style, refresh=False):
         "fingerprint": fingerprint,
         "style": style or "",
         "generated_at": timezone.now().isoformat(),
-        "rates": parse_rates(data),
+        "rates": parse_rates(data, trip),
     }
     trip.save(update_fields=["cost_rates", "updated_at"])
     return trip.cost_rates

@@ -270,11 +270,15 @@ def build_replan_prompt(trip, editable_days, request, places, decisions):
         "- Não repita no dia uma atividade que já aparece em outro dia.\n"
         f"- Cada dia deve ter de {per_day} atividades (no máximo "
         f"{MAX_ACTIVITIES_PER_DAY}), em ordem de horário, com almoço e "
-        "jantar na categoria gastronomy.\n"
+        "jantar na categoria gastronomy. Se o pedido do viajante disser "
+        "quantas atividades quer ou a partir de que horário, siga o pedido.\n"
+        "- Inclua apenas lugares reais. Se o pedido citar um lugar que você "
+        "não conhece, não o inclua e diga isso em changes.\n"
         "- estimated_cost e cost_type seguem as mesmas regras do roteiro "
         "atual (per_person ou total). Use 0 para atividades gratuitas.\n"
         "- Em changes, liste de 1 a 5 frases curtas sobre o que mudou e por "
-        "quê (ex.: \"Dia 2: Sintra entrou no lugar do museu, como pedido\").\n"
+        "quê (ex.: \"Dia 2: Sintra entrou no lugar do museu, como pedido\"), "
+        "citando em que dia ficou cada lugar pedido e cada decisão do grupo.\n"
         "- summary é um resumo curto (até 2 frases) do roteiro ajustado.\n"
         "- Em estimates, informe o custo total do grupo para a viagem toda "
         "depois do ajuste, por categoria: transport, lodging, food e "
@@ -302,7 +306,76 @@ def _activity_to_json(activity):
     return data
 
 
-def parse_proposal(data, trip, editable_days):
+# Refeições podem se repetir (ex.: café da manhã no hotel todos os dias).
+REPEATABLE_CATEGORIES = {Activity.Category.GASTRONOMY}
+
+
+def _remove_repeated(days, trip, editable_ids):
+    """
+    Tira das propostas as atividades que já aparecem em outro dia (dos que
+    não mudam ou de um dia anterior da própria proposta). A IA às vezes
+    repete um passeio mesmo com a regra no prompt.
+    """
+    seen = {
+        _key(activity.title)
+        for activity in Activity.objects.filter(day__trip=trip)
+        .exclude(day_id__in=editable_ids)
+        .exclude(category__in=REPEATABLE_CATEGORIES)
+    }
+    for day in days:
+        kept, in_day = [], set()
+        for activity in day["activities"]:
+            key = _key(activity["title"])
+            repeated = key in in_day or (
+                activity["category"] not in REPEATABLE_CATEGORIES and key in seen
+            )
+            if repeated:
+                continue
+            in_day.add(key)
+            kept.append(activity)
+        day["activities"] = kept
+        seen |= {
+            _key(activity["title"])
+            for activity in kept
+            if activity["category"] not in REPEATABLE_CATEGORIES
+        }
+
+
+def _mentioned(name, titles):
+    key = _key(name)
+    return bool(key) and any(key in title for title in titles)
+
+
+def proposal_warnings(days, trip, editable_ids, places, decisions):
+    """Lugares pedidos e decisões do grupo que não entraram no roteiro."""
+    titles = [
+        _key(f"{activity['title']} {activity.get('location_name') or ''}")
+        for day in days
+        for activity in day["activities"]
+    ]
+    titles += [
+        _key(f"{activity.title} {activity.location_name}")
+        for activity in Activity.objects.filter(day__trip=trip).exclude(
+            day_id__in=editable_ids
+        )
+    ]
+
+    warnings = [
+        f"{place.name} não entrou na proposta."
+        for place in places
+        if not _mentioned(place.name, titles)
+    ]
+    warnings += [
+        f"A decisão do grupo \"{item['title']}\" ({item['choice']}) não "
+        "aparece no roteiro."
+        for item in decisions
+        if item["category"] in {"restaurant", "activity"}
+        and not _mentioned(item["choice"], titles)
+    ]
+    return warnings
+
+
+def parse_proposal(data, trip, editable_days, places=(), decisions=()):
     """Valida a resposta e devolve a proposta pronta para guardar em JSON."""
     if not isinstance(data, dict) or not isinstance(data.get("days"), list):
         raise GeminiInvalidResponseError()
@@ -337,6 +410,9 @@ def parse_proposal(data, trip, editable_days):
             "activities": [_activity_to_json(item) for item in activities],
         })
 
+    editable_ids = {day.id for day in editable_days}
+    _remove_repeated(days, trip, editable_ids)
+
     if not any(day["activities"] for day in days):
         raise GeminiInvalidResponseError()
 
@@ -348,6 +424,7 @@ def parse_proposal(data, trip, editable_days):
         "changes": changes[:MAX_CHANGES],
         "days": days,
         "estimates": _parse_estimates(data.get("estimates"), trip),
+        "warnings": proposal_warnings(days, trip, editable_ids, places, decisions),
     }
 
 
@@ -379,7 +456,7 @@ def create_proposal(trip, user, request="", places=(), editable_days=None):
         required_keys=["days", "estimates"],
         temperature=0.5,
     )
-    proposal = parse_proposal(data, trip, editable_days)
+    proposal = parse_proposal(data, trip, editable_days, places, decisions)
     proposal["decisions"] = decisions
 
     with transaction.atomic():

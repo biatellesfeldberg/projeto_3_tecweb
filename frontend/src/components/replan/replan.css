@@ -145,6 +145,18 @@
   padding-left: 20px;
 }
 
+.replan-warnings {
+  padding: 14px 16px;
+  border: 1px solid #ecd9a8;
+  border-radius: 8px;
+  background: #fbf5e6;
+}
+
+.replan-warnings ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
 .replan-estimate {
   font-variant-numeric: tabular-nums;
 }

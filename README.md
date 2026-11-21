@@ -53,7 +53,7 @@ Nosso projeto é um site que usa IA para a criação de roteiros de viagem perso
 - [x] [S2-13] Implementar a recomendação de destino para o grupo
 - [x] [S2-14] Implementar a calculadora de custo e duração
 - [x] [S2-15] Implementar o replanejamento e a inclusão de sugestões
-- [ ] [S2-16] Avaliar e melhorar as respostas do Gemini
+- [x] [S2-16] Avaliar e melhorar as respostas da IA
 - [ ] [S2-17] Documentar um exemplo de IA usada no desenvolvimento
 - [ ] [S2-18] Preparar o roteiro da apresentação e da demonstração
 - [x] [S2-19] Implementar votações e decisões no backend

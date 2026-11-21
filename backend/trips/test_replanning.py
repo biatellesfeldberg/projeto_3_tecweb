@@ -539,6 +539,111 @@ class ProposalPermissionTests(ReplanTestCase):
         self.assertEqual(self.client.get(self.url).status_code, 401)
 
 
+class AiAnswerQualityTests(ReplanTestCase):
+    """Correções feitas no backend quando a IA não segue todas as regras."""
+
+    def day(self, number, *activities):
+        return {"day_number": number, "title": f"Dia {number}",
+                "activities": list(activities)}
+
+    @patch(GENERATE_JSON)
+    def test_removes_activity_repeated_from_unchanged_day(self, generate_json):
+        generate_json.return_value = fake_proposal(days=[self.day(
+            2,
+            fake_activity("Mosteiro dos Jerónimos", "09:00"),
+            fake_activity("Palácio da Pena", "11:00"),
+        )])
+
+        response = self.propose({"request": "Sintra", "day_ids": [self.days[1].id]})
+
+        self.assertEqual(
+            [a["title"] for a in response.data["days"][0]["proposed"]],
+            ["Palácio da Pena"],
+        )
+
+    @patch(GENERATE_JSON)
+    def test_removes_repetitions_inside_the_proposal(self, generate_json):
+        generate_json.return_value = fake_proposal(days=[
+            self.day(1, fake_activity("Café do hotel", "08:00", "gastronomy"),
+                     fake_activity("Torre de Belém", "10:00")),
+            self.day(2, fake_activity("Café do hotel", "08:00", "gastronomy"),
+                     fake_activity("torre de belem", "10:00"),
+                     fake_activity("Palácio da Pena", "11:00"),
+                     fake_activity("Palácio da Pena", "15:00")),
+            self.day(3, fake_activity("Oceanário", "10:00")),
+        ])
+
+        days = self.propose().data["days"]
+
+        # Refeições podem repetir; passeios não.
+        self.assertEqual(
+            [a["title"] for a in days[0]["proposed"]],
+            ["Café do hotel", "Torre de Belém"],
+        )
+        self.assertEqual(
+            [a["title"] for a in days[1]["proposed"]],
+            ["Café do hotel", "Palácio da Pena"],
+        )
+
+    @patch(GENERATE_JSON)
+    def test_day_with_only_repetitions_is_rejected(self, generate_json):
+        generate_json.return_value = fake_proposal(days=[self.day(
+            2, fake_activity("Mosteiro dos Jerónimos", "09:00"),
+        )])
+
+        response = self.propose({"request": "x", "day_ids": [self.days[1].id]})
+
+        self.assertEqual(response.status_code, 502)
+        self.assertFalse(ItineraryProposal.objects.exists())
+
+    def closed_poll(self, title, category, label):
+        TripPoll.objects.create(
+            trip=self.trip, title=title, category=category, status="closed",
+            closed_at=timezone.now(), decision={"label": label, "reason": ""},
+        )
+
+    @patch(GENERATE_JSON)
+    def test_warns_about_missing_places_and_decisions(self, generate_json):
+        generate_json.return_value = fake_proposal()
+        place = SavedPlace.objects.create(owner=self.owner, name="LX Factory",
+                                          city="Lisboa", category="shopping")
+        self.closed_poll("Jantar de sexta", "restaurant", "Cervejaria Ramiro")
+        self.closed_poll("Destino", "destination", "Lisboa")
+
+        response = self.propose({"request": "Mais leve", "place_ids": [place.id]})
+
+        # A decisão de destino não vira atividade, então não gera aviso.
+        self.assertEqual(response.data["warnings"], [
+            "LX Factory não entrou na proposta.",
+            'A decisão do grupo "Jantar de sexta" (Cervejaria Ramiro) não '
+            "aparece no roteiro.",
+        ])
+
+    @patch(GENERATE_JSON)
+    def test_no_warnings_when_everything_is_included(self, generate_json):
+        place = SavedPlace.objects.create(owner=self.owner, name="Palácio da Pena",
+                                          city="Sintra", category="culture")
+        # A decisão já está em um dia que não muda.
+        self.closed_poll("Passeio", "activity", "Museu do Azulejo")
+        generate_json.return_value = fake_proposal(day_numbers=(2,))
+
+        response = self.propose({"place_ids": [place.id],
+                                 "day_ids": [self.days[1].id]})
+
+        self.assertEqual(response.data["warnings"], [])
+
+    @patch(GENERATE_JSON)
+    def test_prompt_lets_request_set_pace_and_forbids_unknown_places(self, generate_json):
+        generate_json.return_value = fake_proposal()
+
+        self.propose({"request": "No máximo 2 atividades por dia."})
+
+        prompt = generate_json.call_args.args[0]
+        self.assertIn("quantas atividades quer ou a partir de que horário, siga o pedido", prompt)
+        self.assertIn("Inclua apenas lugares reais", prompt)
+        self.assertIn("cada lugar pedido e cada decisão do grupo", prompt)
+
+
 class CompareDayTests(APITestCase):
     def test_ignores_case_and_accents(self):
         result = compare_day(

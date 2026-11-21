@@ -798,7 +798,8 @@ custo(dias) = passagem ida e volta
 ```
 
 Validação da resposta da IA: se faltar algum valor, vier negativo ou em
-formato errado, ou se hospedagem ou alimentação vierem zeradas, a resposta é
+formato errado, se hospedagem ou alimentação vierem zeradas, ou se a
+passagem vier zerada com origem e destino em cidades diferentes, a resposta é
 recusada (`502`) e os valores guardados anteriormente são mantidos.
 
 Erros:
@@ -870,6 +871,7 @@ pedido.
       "reason": "Mais votado"
     }
   ],
+  "warnings": [],
   "days": [
     {
       "day_id": 31,
@@ -913,6 +915,7 @@ pedido.
 |---|---|
 | `status` | `pending`, `applied`, `discarded` ou `superseded` |
 | `days` | Só os dias que podem mudar. `current` são as atividades atuais (objeto `Activity`); `proposed` são as atividades propostas, ainda sem `id` |
+| `warnings` | Avisos para conferir antes de aplicar: lugares pedidos e decisões do grupo (restaurante ou atividade) que não aparecem no roteiro. Vazio quando está tudo certo |
 | `added` / `removed` / `kept` | Títulos que entram, saem ou continuam no dia (sem diferenciar maiúsculas e acentos). `changed` é `false` quando o dia fica igual |
 | `estimates` / `current_estimate` | Estimativa da viagem depois do ajuste (mesmo formato de [`cost_estimate`](#cost_estimate-aba-orçamento)) e a atual |
 | `is_outdated` | `true` quando o roteiro mudou depois da proposta. Nesse caso ela não pode ser aplicada |
@@ -953,7 +956,9 @@ A resposta da IA é recusada (`502`) quando falta algum dos dias pedidos,
 quando a estrutura vem errada ou quando nenhum dia tem atividade válida. Os
 campos das atividades são corrigidos como na
 [geração de roteiro](#validação-da-resposta-da-ia). Dias que não foram
-pedidos são ignorados.
+pedidos são ignorados. Atividades que repetem um passeio de outro dia são
+retiradas (refeições podem se repetir); se um dia ficar sem nenhuma
+atividade, a resposta é recusada.
 
 ### `GET /api/trips/{id}/proposals/`: proposta pendente
 

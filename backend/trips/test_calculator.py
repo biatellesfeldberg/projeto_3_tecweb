@@ -352,12 +352,36 @@ class InvalidAiResponseTests(CostCalculatorApiTestCase):
         self.assertEqual(self.trip.cost_rates, saved)
 
     @patch(GENERATE_JSON)
-    def test_zero_transport_is_allowed(self, generate_json):
+    def test_zero_transport_is_allowed_in_the_same_city(self, generate_json):
+        self.trip.destination = "Sao Paulo, SP"
+        self.trip.save()
         generate_json.return_value = fake_rates(transport_round_trip=0)
 
         response = self.calculate({"mode": "duration", "days": 1})
 
         self.assertEqual(response.status_code, 200)
+
+    @patch(GENERATE_JSON)
+    def test_zero_transport_between_cities_is_rejected(self, generate_json):
+        generate_json.return_value = fake_rates(transport_round_trip=0)
+
+        response = self.calculate({"mode": "duration", "days": 1})
+
+        self.assertEqual(response.status_code, 502)
+        self.trip.refresh_from_db()
+        self.assertEqual(self.trip.cost_rates, {})
+
+    @patch(GENERATE_JSON)
+    def test_prompt_asks_for_stable_values_per_transport(self, generate_json):
+        generate_json.return_value = fake_rates()
+
+        self.calculate({"mode": "duration", "days": 3})
+
+        prompt = generate_json.call_args.args[0]
+        self.assertIn("preços médios de mercado", prompt)
+        self.assertIn("multiplicado pelo número de viajantes", prompt)
+        self.assertIn("combustível e os pedágios", prompt)
+        self.assertEqual(generate_json.call_args.kwargs["temperature"], 0.2)
 
 
 class CostCalculatorPermissionTests(CostCalculatorApiTestCase):

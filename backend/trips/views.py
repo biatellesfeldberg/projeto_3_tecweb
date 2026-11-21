@@ -274,6 +274,7 @@ def _proposal_data(proposal, user):
         "summary": content.get("summary", ""),
         "changes": content.get("changes", []),
         "decisions": content.get("decisions", []),
+        "warnings": content.get("warnings", []),
         "days": days,
         "estimates": content.get("estimates", {}),
         "current_estimate": trip.cost_estimate,

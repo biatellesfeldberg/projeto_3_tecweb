@@ -193,6 +193,17 @@ export function ProposalView({ proposal, trip, busy, onApply, onDiscard, onNew }
 
       {proposal.summary && <p>{proposal.summary}</p>}
 
+      {proposal.warnings?.length > 0 && (
+        <div className="replan-warnings" role="status">
+          <p className="replan-column-label">Confira antes de aplicar</p>
+          <ul>
+            {proposal.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {proposal.changes.length > 0 && (
         <ul className="replan-changes">
           {proposal.changes.map((change) => (

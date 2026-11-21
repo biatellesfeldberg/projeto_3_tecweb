@@ -1218,6 +1218,7 @@ const mock = {
       summary: "Proposta simulada para desenvolvimento.",
       changes: ["Um passeio novo entrou no fim de cada dia escolhido."],
       decisions: [],
+      warnings: [],
       days,
       estimates: copy(trip.cost_estimate || {}),
       current_estimate: copy(trip.cost_estimate || {}),
