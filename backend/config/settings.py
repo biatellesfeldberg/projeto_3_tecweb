@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -29,11 +30,21 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
-    if host.strip()
+def env_list(name):
+    """Lê uma variável de ambiente com valores separados por vírgula."""
+    return [
+        item.strip()
+        for item in os.getenv(name, "").split(",")
+        if item.strip()
     ]
+
+
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
+
+# O Render informa o endereço público do serviço nesta variável.
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
@@ -59,6 +70,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serve os arquivos estáticos (admin) em produção.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
 
     "corsheaders.middleware.CorsMiddleware",
@@ -93,12 +106,25 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# Em produção, DATABASE_URL aponta para o PostgreSQL do Render.
+# Sem ela, o projeto usa o SQLite local.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
@@ -136,6 +162,29 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Arquivos enviados: "filesystem" (pasta media/, padrão local) ou
+# "database" (tabela core.StoredFile, usada no Render, onde o disco é
+# apagado a cada reinício).
+MEDIA_STORAGE = os.getenv("DJANGO_MEDIA_STORAGE", "filesystem").lower()
+
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "core.storage.DatabaseStorage"
+            if MEDIA_STORAGE == "database"
+            else "django.core.files.storage.FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -148,7 +197,24 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-]
+] + env_list("DJANGO_CORS_ALLOWED_ORIGINS")
+
+# Padrões de origem (expressões regulares), úteis quando o Render acrescenta
+# um sufixo aleatório ao nome do serviço.
+CORS_ALLOWED_ORIGIN_REGEXES = env_list("DJANGO_CORS_ALLOWED_ORIGIN_REGEXES")
+
+# Origens confiáveis para formulários com CSRF (ex.: /admin em HTTPS).
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
+
+# Atrás do proxy do Render, as requisições chegam como HTTP; este cabeçalho
+# indica que a original era HTTPS (URLs absolutas, como a da foto, usam https).
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Em produção, cookies do admin só trafegam por HTTPS.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 # Modelo de usuário do projeto.
 AUTH_USER_MODEL = "accounts.User"

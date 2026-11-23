@@ -13,6 +13,7 @@ import {
   mockLodgingSuggestions,
   mockTrips,
 } from "../mocks/trips";
+import { API_URL } from "./config";
 
 export const USE_MOCKS =
   import.meta.env.VITE_USE_MOCKS === "true";
@@ -341,7 +342,7 @@ export async function apiRequest(
   let response;
 
   try {
-    response = await fetch(`/api/${path}`, {
+    response = await fetch(`${API_URL}/api/${path}`, {
       method,
       signal,
 

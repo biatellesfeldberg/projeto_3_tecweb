@@ -1,3 +1,4 @@
+import { API_URL } from "./config";
 const TOKEN_KEY = "rumo.auth.token";
 
 export function getToken() {
@@ -53,7 +54,7 @@ export async function authRequest(
   let response;
 
   try {
-    response = await fetch(`/api/auth/${path}/`, {
+    response = await fetch(`${API_URL}/api/auth/${path}/`, {
       method,
       signal,
 

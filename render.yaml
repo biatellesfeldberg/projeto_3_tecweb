@@ -1,0 +1,60 @@
+# Blueprint do Render: cria o banco, o backend e o frontend do Rumo.
+# Passo a passo em docs/deploy.md.
+
+databases:
+  - name: rumo-db
+    plan: free
+    databaseName: rumo
+    user: rumo
+
+services:
+  # Backend: Django REST Framework + Gunicorn
+  - type: web
+    name: rumo-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --no-input
+    # As migrações rodam a cada início. O timeout maior cobre a geração de
+    # roteiros pela IA, que pode levar até um minuto.
+    startCommand: python manage.py migrate --no-input && gunicorn config.wsgi:application --timeout 120
+    healthCheckPath: /api/health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rumo-db
+          property: connectionString
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_MEDIA_STORAGE
+        value: database
+      # Aceita o frontend publicado, com ou sem sufixo no nome.
+      - key: DJANGO_CORS_ALLOWED_ORIGIN_REGEXES
+        value: ^https://rumo-frontend(-[a-z0-9]+)*\.onrender\.com$
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+
+  # Frontend: React (Vite) publicado como site estático
+  - type: web
+    name: rumo-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    # Qualquer rota do React (/viagens/1, /lugares...) abre o index.html.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      # Endereço público do backend, ex.: https://rumo-backend.onrender.com
+      - key: VITE_API_URL
+        sync: false
