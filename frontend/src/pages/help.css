@@ -1,0 +1,15 @@
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+}
+
+.help-card h2 {
+  margin-bottom: 10px;
+  font-size: 1.3rem;
+}
+
+.help-card p {
+  color: #4d5f59;
+  line-height: 1.6;
+}

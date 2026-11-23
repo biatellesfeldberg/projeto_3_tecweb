@@ -126,6 +126,8 @@ export default function Header() {
           rumo
         </Link>
 
+        {/* Sem login, esses links só levariam de volta à tela de entrada. */}
+        {(user || isRestoring) && (
         <nav
           className="primary-nav"
           aria-label="Navegação principal"
@@ -142,6 +144,7 @@ export default function Header() {
             </NavLink>
           ))}
         </nav>
+        )}
 
         <div className="header-actions">
           <NavLink to="/ajuda" className="help-link">
@@ -184,10 +187,6 @@ export default function Header() {
 
                 <Link to="/conta">
                   Perfil e preferências
-                </Link>
-
-                <Link to="/conta/seguranca">
-                  Segurança
                 </Link>
 
                 <Link to="/conta/historico">

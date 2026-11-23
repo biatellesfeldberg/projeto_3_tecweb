@@ -75,7 +75,7 @@ h2 {
 }
 
 .muted {
-  color: #65736f;
+  color: #5c6a66;
 }
 
 .eyebrow {
@@ -134,7 +134,7 @@ h2 {
   padding-top: 3px;
   border-bottom: 3px solid transparent;
 
-  color: #65736f;
+  color: #5c6a66;
   font-size: 0.95rem;
   white-space: nowrap;
 }
@@ -158,7 +158,9 @@ h2 {
 }
 
 .help-link {
-  color: #65736f;
+  display: inline-block;
+  padding: 6px 0;
+  color: #5c6a66;
   font-size: 0.9rem;
 }
 
@@ -451,9 +453,11 @@ h2 {
 
 .tab {
   display: block;
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 12px 0;
   border-bottom: 3px solid transparent;
-  color: #65736f;
+  color: #5c6a66;
 }
 
 .tab.is-active {
@@ -468,7 +472,7 @@ h2 {
   gap: 12px;
 
   margin-bottom: 16px;
-  color: #65736f;
+  color: #5c6a66;
   font-size: 0.8rem;
 }
 
@@ -526,7 +530,7 @@ h2 {
   padding: 24px 0;
 
   border-top: 1px solid #e0e5df;
-  color: #65736f;
+  color: #5c6a66;
   font-size: 0.75rem;
 }
 
@@ -649,8 +653,11 @@ h2 {
     min-height: 290px;
   }
 
+  /* No celular, as abas quebram em linhas para a aba ativa ficar sempre
+     visível (com 5 abas, a última ficava escondida na rolagem lateral). */
   .tabs {
-    gap: 28px;
+    flex-wrap: wrap;
+    gap: 0 24px;
     font-size: 0.9rem;
   }
 

@@ -19,6 +19,8 @@ import TripPage from "./pages/TripPage";
 import FriendsPage from "./pages/FriendsPage";
 import GroupPage from "./pages/GroupPage";
 import DestinationPage from "./pages/DestinationPage";
+import HelpPage from "./pages/HelpPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 const routes = [
   { path: "/viagens", title: "Minhas viagens" },
@@ -43,7 +45,6 @@ const routes = [
   { path: "/lugares", title: "Meus lugares" },
   { path: "/amigos", title: "Amigos" },
   { path: "/conta", title: "Minha conta" },
-  { path: "/conta/seguranca", title: "Segurança" },
   {
     path: "/conta/historico",
     title: "Histórico de viagens",
@@ -141,14 +142,16 @@ export default function App() {
                 <TripPage key="trip" tab="lugares" />
               ) : route.path === "/viagens/:tripId/orcamento" ? (
                 <TripPage key="trip" tab="orcamento" />
+              ) : route.path === "/ajuda" ? (
+                <HelpPage />
               ) : (
-                <></>
+                <NotFoundPage />
               )
             }
           />
         ))}
 
-        <Route path="*" element={<></>} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );
