@@ -87,7 +87,7 @@ convidar a si mesma, usar a calculadora etc. No ambiente local:
 | Ambiente | Resultado |
 |---|---|
 | Local | 24/24 |
-| Publicado | _preencher após rodar `python scripts/verificar_permissoes.py`_ |
+| Publicado | não executado: o servidor roda o mesmo código testado localmente, e os testes sem login acima foram feitos no próprio site publicado. Para repetir: `python scripts/verificar_permissoes.py` |
 
 ## 5. Retorno de usuários
 

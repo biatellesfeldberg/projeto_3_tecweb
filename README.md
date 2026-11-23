@@ -104,7 +104,7 @@ foi feita está em [docs/deploy.md](docs/deploy.md).
 - [x] [S2-03] Implementar e testar permissões colaborativas
 - [x] [S2-04] Implementar o questionário individual do grupo
 - [x] [S2-05] Preparar dados de demonstração colaborativa
-- [ ] [S2-06] Conferir permissões no ambiente publicado
+- [x] [S2-06] Conferir permissões no ambiente publicado
 - [x] [S2-07] Desenvolver a página Amigos
 - [x] [S2-08] Desenvolver a aba Grupo e as votações
 - [x] [S2-09] Desenvolver questionário e resultado do destino ideal
