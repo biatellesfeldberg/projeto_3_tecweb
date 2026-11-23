@@ -8,6 +8,59 @@ Renata Hemsi Leventhal
 
 Nosso projeto é um site que usa IA para a criação de roteiros de viagem personalizados. Utilizamos uma API do Gemini. O usuário pode selecionar destinos, datas e outros detalhes de viagem como o orçamento e salvar seus planos em sua própria conta. 
 
+### Para quem é
+
+Pessoas que viajam em grupo ou sozinhas e perdem tempo juntando ideias em
+conversas, planilhas e abas do navegador. O Rumo reúne tudo num só lugar:
+a IA monta e ajusta o roteiro, e o grupo decide junto para onde ir.
+
+### Funcionalidades
+
+- **Conta:** cadastro, login, perfil com foto e preferências de viagem.
+- **Minhas viagens:** planejamento com origem, destino, datas, viajantes e
+  orçamento; viagens em planejamento, próximas e realizadas.
+- **Roteiro com IA:** o Gemini gera o roteiro dia a dia; a pessoa edita,
+  reordena e adiciona atividades, vê o trajeto do dia no mapa e pode pedir
+  ajustes em linguagem natural (a IA propõe as mudanças e a pessoa aplica ou
+  descarta).
+- **Meus lugares:** coleção de lugares para visitar, que podem ser levados
+  para o roteiro de qualquer viagem.
+- **Orçamento:** comparação entre o valor planejado e os custos estimados,
+  com uma calculadora de custo e duração feita pela IA.
+- **Viagem em grupo:** amigos, convites, questionário individual de
+  preferências, recomendação do destino ideal para o grupo e votações.
+
+### Onde a IA é usada
+
+| Funcionalidade | O que a IA faz |
+|---|---|
+| Gerar roteiro | Monta os dias com atividades, horários, custos e sugestões de hospedagem |
+| Ajustar roteiro | Interpreta o pedido da pessoa e propõe alterações no roteiro existente |
+| Destino ideal | Cruza as respostas do grupo e sugere destinos compatíveis |
+| Calculadora | Estima custos de hospedagem, alimentação e transporte no destino |
+
+As chamadas ficam em `backend/core/gemini.py`; a chave nunca vai para o
+frontend. A avaliação das respostas da IA está em
+[docs/avaliacao-ia.md](docs/avaliacao-ia.md).
+
+### Tecnologias
+
+- **Frontend:** React 19, React Router, Vite, Tailwind CSS e Leaflet (mapa
+  com OpenStreetMap).
+- **Backend:** Django 5, Django REST Framework e autenticação por token.
+- **IA:** Google Gemini (`google-genai`).
+- **Publicação:** Render (site estático, Gunicorn e PostgreSQL).
+
+### Documentação
+
+- [Fluxo de telas](fluxo_de_telas.pdf)
+- [Quadro de tarefas](https://github.com/biatellesfeldberg/projeto_3_tecweb/projects)
+- [Contratos da API](docs/contratos-api.md)
+- [Avaliação das respostas da IA](docs/avaliacao-ia.md)
+- [Publicação no Render](docs/deploy.md)
+- [Validação do produto](docs/validacao.md)
+- [Roteiro da apresentação](docs/apresentacao.md)
+
 ## Acesse o Rumo
 
 - **Site:** https://rumo-frontend.onrender.com
@@ -41,6 +94,8 @@ foi feita está em [docs/deploy.md](docs/deploy.md).
 - [x] [S1-20] Implementar os endpoints de lugares salvos
 - [x] [S1-21] Desenvolver Meus lugares e a seleção para viagens
 - [x] [S1-22] Desenvolver o roteiro diário com edição e mapa
+- [ ] [S1-23] Publicar a primeira versão da aplicação — *substituída pela publicação final (S2-22), por decisão do grupo*
+- [x] [S1-24] Registrar a entrega e encerrar a Sprint 1
 
 ## Sprint 2 — 16/11 a 19/11/2026
 
@@ -54,8 +109,8 @@ foi feita está em [docs/deploy.md](docs/deploy.md).
 - [x] [S2-08] Desenvolver a aba Grupo e as votações
 - [x] [S2-09] Desenvolver questionário e resultado do destino ideal
 - [x] [S2-10] Desenvolver o painel de ajuste do roteiro
-- [ ] [S2-11] Revisar responsividade e acessibilidade da interface
-- [ ] [S2-12] Corrigir problemas de usabilidade encontrados nos testes
+- [x] [S2-11] Revisar responsividade e acessibilidade da interface
+- [x] [S2-12] Corrigir problemas de usabilidade encontrados nos testes
 - [x] [S2-13] Implementar a recomendação de destino para o grupo
 - [x] [S2-14] Implementar a calculadora de custo e duração
 - [x] [S2-15] Implementar o replanejamento e a inclusão de sugestões
@@ -76,9 +131,9 @@ Os endpoints, campos e exemplos de resposta de **conta**, **viagens**,
 [`docs/contratos-api.md`](docs/contratos-api.md). Qualquer mudança na API deve
 atualizar esse arquivo no mesmo commit.
 
-Enquanto os endpoints de viagens não ficam prontos, o frontend usa dados
-simulados (`frontend/src/mocks/trips.js`) por meio de
-`frontend/src/services/trips.js`.
+O frontend sempre usa a API real. Para trabalhar só na interface, sem o
+backend, dá para ligar dados simulados (`frontend/src/mocks/trips.js`) com
+`VITE_USE_MOCKS=true` no arquivo `frontend/.env.local`.
 
 ## Executar o backend localmente
 
@@ -166,12 +221,50 @@ Para criar uma conta administrativa:
 python manage.py createsuperuser
 ```
 
+### Dados de demonstração
+
+Para ter contas, amizades, convites, questionários e votações prontos:
+
+```bash
+python manage.py seed_collaboration_demo
+```
+
+O comando mostra as contas criadas (`ana.demo@example.com`,
+`bia.demo@example.com` etc.) e a senha delas. Os registros ficam marcados com
+`[S2-05-DEMO]`.
+
+## Executar o frontend localmente
+
+Com o backend rodando em `http://127.0.0.1:8000`, em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Site: http://localhost:5173. O Vite encaminha as chamadas `/api` para o
+backend local, então não é preciso configurar nada. Na publicação, o endereço
+do backend vem de `VITE_API_URL` (veja [docs/deploy.md](docs/deploy.md)).
+
 ## Executar os testes
 
 ```bash
 cd backend
-source .venv/bin/activate
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 python manage.py test
 ```
 
 Os testes do Gemini usam respostas simuladas e não consomem a cota da API.
+
+### Verificar as permissões no site publicado
+
+O script [`scripts/verificar_permissoes.py`](scripts/verificar_permissoes.py)
+entra com duas contas (A e B), cria dados temporários com a conta A e
+confere que a conta B não consegue ler, alterar nem apagar esses dados.
+No fim, apaga o que criou.
+
+```bash
+python scripts/verificar_permissoes.py                        # site publicado
+python scripts/verificar_permissoes.py http://127.0.0.1:8000  # local
+```
