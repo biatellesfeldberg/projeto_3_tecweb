@@ -1,5 +1,6 @@
 # Blueprint do Render: cria o banco, o backend e o frontend do Rumo.
-# Passo a passo em docs/deploy.md.
+# A publicação foi feita manualmente pelo painel (docs/deploy.md); este
+# arquivo descreve a mesma configuração e pode ser usado como Blueprint.
 
 databases:
   - name: rumo-db
@@ -38,7 +39,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-flash-latest
+        value: gemini-3.5-flash-lite
 
   # Frontend: React (Vite) publicado como site estático
   - type: web

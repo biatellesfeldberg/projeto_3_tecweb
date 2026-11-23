@@ -1,16 +1,17 @@
 # Publicação no Render
 
-O Rumo é publicado no [Render](https://render.com), no plano gratuito, em três
-partes:
+O Rumo está publicado no [Render](https://render.com), no plano gratuito:
 
-| Parte | Tipo no Render | Nome |
+| Parte | Tipo no Render | Endereço |
 |---|---|---|
-| Banco de dados | PostgreSQL | `rumo-db` |
-| Backend (Django REST Framework + Gunicorn) | Web Service (Python) | `rumo-backend` |
-| Frontend (React + Vite) | Static Site | `rumo-frontend` |
+| Frontend (React + Vite) | Static Site `rumo-frontend` | https://rumo-frontend.onrender.com |
+| Backend (Django REST Framework + Gunicorn) | Web Service `rumo-backend` | https://rumo-backend-j0f6.onrender.com |
+| Banco de dados | PostgreSQL `rumo-db` (Ohio) | acessível só pelo backend |
 
-Tudo está descrito no arquivo [`render.yaml`](../render.yaml) (um *Blueprint*):
-o Render cria as três partes de uma vez a partir do repositório.
+A publicação foi feita manualmente pelo painel do Render, com os passos
+abaixo. O arquivo [`render.yaml`](../render.yaml) descreve a mesma
+configuração e pode ser usado como *Blueprint* (**New → Blueprint**) para
+recriar tudo de uma vez.
 
 ## Como o código foi preparado
 
@@ -27,75 +28,128 @@ o Render cria as três partes de uma vez a partir do repositório.
   (tabela `core.StoredFile`, em `backend/core/storage.py`). Elas continuam
   sendo entregues pelo endpoint autenticado `GET /api/auth/me/photo/`.
 - **Comunicação entre frontend e backend:** o frontend chama o endereço de
-  `VITE_API_URL` (definido no build). O backend libera o frontend publicado
+  `VITE_API_URL` (gravado no build). O backend libera o frontend publicado
   por CORS (`DJANGO_CORS_ALLOWED_ORIGIN_REGEXES`).
-- **Segurança:** `DEBUG=False`, chave secreta gerada pelo Render, cookies
-  seguros e HTTPS reconhecido atrás do proxy do Render. A chave do Gemini
-  fica só no backend.
+- **Segurança:** `DEBUG=False`, chave secreta própria, cookies seguros e
+  HTTPS reconhecido atrás do proxy do Render. A chave do Gemini fica só nas
+  variáveis de ambiente do backend.
 
 ## Passo a passo
 
-### 1. Acesso ao repositório
+### 1. Banco de dados
 
-O repositório pertence a `biatellesfeldberg`. A conta do Render precisa
-conseguir ler esse repositório pelo GitHub:
+**New → Postgres**:
 
-- se a dona do repositório criar a conta do Render (entrando com o GitHub), é
-  só autorizar o acesso quando o Render pedir;
-- se outra integrante criar a conta, ao conectar o GitHub o Render instala um
-  aplicativo no repositório, e a dona precisa aprovar esse pedido no GitHub.
+| Campo | Valor |
+|---|---|
+| Name | `rumo-db` |
+| Database / User | `rumo` / `rumo` |
+| Region | Ohio (a mesma do backend) |
+| Plan | Free |
 
-### 2. Criar o Blueprint
+O Render permite **um banco gratuito ativo por conta**. Se a conta já tiver
+um (de outro projeto), é preciso suspendê-lo ou usar outra conta.
 
-1. No painel do Render: **New → Blueprint**.
-2. Escolha o repositório `projeto_3_tecweb`, branch `main`.
-3. O Render lê o `render.yaml` e mostra o banco e os dois serviços. Ele pede
-   os valores marcados como secretos:
-   - `GEMINI_API_KEY`: chave do [Google AI Studio](https://aistudio.google.com/apikey);
-   - `VITE_API_URL`: por enquanto, `https://rumo-backend.onrender.com`
-     (confirme no passo 3).
-4. Clique em **Apply** e aguarde. O primeiro build leva alguns minutos.
+Quando o banco estiver *Available*, copie a **Internal Database URL**
+(seção *Connections*).
 
-### 3. Conferir o endereço do backend
+### 2. Backend
 
-Se o nome `rumo-backend` já existir no Render, o serviço recebe um sufixo
-(ex.: `rumo-backend-ab12.onrender.com`).
+**New → Web Service**, com o repositório `projeto_3_tecweb` (pela lista ou
+por **Public Git Repository**):
 
-1. Abra o serviço **rumo-backend** e copie o endereço exibido no topo.
-2. Se for diferente do que foi informado, abra **rumo-frontend → Environment**,
-   corrija `VITE_API_URL` (sem barra no final) e faça
-   **Manual Deploy → Deploy latest commit**. O frontend precisa ser
-   reconstruído porque o endereço é gravado no build.
+| Campo | Valor |
+|---|---|
+| Name | `rumo-backend` |
+| Language | Python 3 |
+| Branch | `main` |
+| Region | Ohio |
+| Root Directory | `backend` |
+| Build Command | `pip install -r requirements.txt && python manage.py collectstatic --no-input` |
+| Start Command | `python manage.py migrate --no-input && gunicorn config.wsgi:application --timeout 120` |
+| Health Check Path | `/api/health/` |
+| Instance Type | Free |
 
-O CORS já aceita o frontend com ou sem sufixo, então o backend não precisa
-mudar.
+Variáveis de ambiente:
 
-### 4. Verificar
+| Variável | Valor |
+|---|---|
+| `PYTHON_VERSION` | `3.12.7` |
+| `DATABASE_URL` | Internal Database URL do `rumo-db` |
+| `DJANGO_SECRET_KEY` | valor gerado (botão *Generate*) |
+| `DJANGO_DEBUG` | `False` |
+| `DJANGO_MEDIA_STORAGE` | `database` |
+| `DJANGO_CORS_ALLOWED_ORIGIN_REGEXES` | `^https://rumo-frontend(-[a-z0-9]+)*\.onrender\.com$` |
+| `GEMINI_API_KEY` | chave do Google AI Studio |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` |
 
-- `https://<backend>/api/health/` responde `{"status": "ok", ...}`.
-- O endereço do **rumo-frontend** abre o site; cadastro, login e criação de
-  viagem funcionam.
-- Recarregar uma página interna (ex.: `/viagens`) também funciona.
+O endereço do próprio backend entra em `ALLOWED_HOSTS` automaticamente
+(variável `RENDER_EXTERNAL_HOSTNAME`, definida pelo Render).
 
-### 5. Dados de demonstração e conta de administração (opcional)
+### 3. Frontend
 
-O plano gratuito não tem terminal no servidor, mas dá para rodar os comandos
-do Django no seu computador apontando para o banco publicado:
+**New → Static Site**, com o mesmo repositório:
 
-1. Em **rumo-db → Connect**, copie a **External Database URL**.
-2. Na pasta `backend`, com o ambiente virtual ativo:
+| Campo | Valor |
+|---|---|
+| Name | `rumo-frontend` |
+| Branch | `main` |
+| Root Directory | `frontend` |
+| Build Command | `npm ci && npm run build` |
+| Publish Directory | `dist` |
 
-   ```powershell
-   $env:DATABASE_URL = "<External Database URL>"
-   python manage.py seed_collaboration_demo
-   python manage.py createsuperuser
-   Remove-Item Env:DATABASE_URL
-   ```
+Variáveis de ambiente:
 
-   No Git Bash: `DATABASE_URL="<External Database URL>" python manage.py seed_collaboration_demo`.
+| Variável | Valor |
+|---|---|
+| `VITE_API_URL` | endereço do backend, sem barra no final (`https://rumo-backend-j0f6.onrender.com`) |
+| `NODE_VERSION` | `22.12.0` |
+
+Depois de criar, em **Redirects/Rewrites**, adicione a regra
+`/*` → `/index.html` com a ação **Rewrite**. Sem ela, recarregar uma página
+interna (ex.: `/viagens/1`) dá erro 404.
+
+Se o endereço do backend mudar, corrija `VITE_API_URL` e faça
+**Manual Deploy → Deploy latest commit** no frontend: o endereço é gravado
+no build.
+
+### 4. Verificação (23/11/2026)
+
+- `/api/health/` responde `{"status": "ok", ...}`;
+- arquivos do admin carregam (WhiteNoise);
+- o CORS libera só o frontend publicado;
+- cadastro, login, criação de viagem e geração de roteiro funcionam no site;
+- a foto de perfil continua aparecendo depois de recarregar a página;
+- recarregar páginas internas funciona (regra de Rewrite).
+
+### 5. Dados de demonstração (opcional)
+
+O plano gratuito não tem terminal no servidor, mas os comandos do Django
+podem rodar no computador apontando para o banco publicado. Copie a
+**External Database URL** do `rumo-db` e, na pasta `backend` (cmd):
+
+```cmd
+env\Scripts\activate
+set DATABASE_URL=<External Database URL>
+python manage.py seed_collaboration_demo
+set DATABASE_URL=
+```
 
 > Atenção: enquanto `DATABASE_URL` estiver definida, os comandos alteram o
-> banco **publicado**. Remova a variável ao terminar.
+> banco **publicado**. A última linha remove a variável.
+
+## Problemas encontrados
+
+- **IA indisponível (`503`) no site publicado.** Os logs do backend mostravam
+  `Gemini: falha temporária 503`. O mesmo erro acontecia localmente com a
+  mesma chave: o Google respondia *"This model is currently experiencing high
+  demand"* para quase todos os modelos do plano gratuito, e os modelos
+  `gemini-2.5-*` respondiam `404` (não disponíveis para chaves novas).
+  **Solução:** ativar o faturamento no projeto da chave (Google AI Studio,
+  *Paid tier*) e usar `gemini-3.5-flash-lite`. Cada roteiro custa uma fração
+  de centavo; vale definir um limite de gastos no projeto.
+- **Limite de um banco gratuito por conta** no Render: resolvido suspendendo
+  o banco de um projeto anterior.
 
 ## Limitações do plano gratuito
 
@@ -103,4 +157,6 @@ do Django no seu computador apontando para o banco publicado:
   disso pode levar cerca de 1 minuto. Antes de uma demonstração, abra
   `/api/health/` para acordá-lo.
 - O banco gratuito do Render expira 30 dias após a criação.
-- Cada push na branch `main` gera um novo deploy automático.
+- Novos commits na `main` só aparecem no site depois de um novo deploy
+  (automático se o repositório estiver conectado pelo GitHub; senão,
+  **Manual Deploy** em cada serviço).

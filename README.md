@@ -8,8 +8,14 @@ Renata Hemsi Leventhal
 
 Nosso projeto é um site que usa IA para a criação de roteiros de viagem personalizados. Utilizamos uma API do Gemini. O usuário pode selecionar destinos, datas e outros detalhes de viagem como o orçamento e salvar seus planos em sua própria conta. 
 
+## Acesse o Rumo
 
+- **Site:** https://rumo-frontend.onrender.com
+- **API (verificação):** https://rumo-backend-j0f6.onrender.com/api/health/
 
+Publicado no Render (plano gratuito): o backend "dorme" após 15 minutos sem
+uso, então o primeiro acesso pode levar cerca de 1 minuto. Como a publicação
+foi feita está em [docs/deploy.md](docs/deploy.md).
 
 ## Sprint 1 — 10/11 a 13/11/2026
 
@@ -59,7 +65,7 @@ Nosso projeto é um site que usa IA para a criação de roteiros de viagem perso
 - [x] [S2-19] Implementar votações e decisões no backend
 - [x] [S2-20] Desenvolver a aba Orçamento e a calculadora
 - [ ] [S2-21] Validar o produto completo e coletar retorno de usuários
-- [ ] [S2-22] Atualizar e verificar o deploy final
+- [x] [S2-22] Atualizar e verificar o deploy final
 - [ ] [S2-23] Finalizar a documentação do projeto
 - [ ] [S2-24] Encerrar o quadro e conferir os requisitos da entrega
 
@@ -106,7 +112,7 @@ O backend usa o Google Gemini para gerar os roteiros e sugerir destinos. As
 chamadas ficam centralizadas em `backend/core/gemini.py` e a chave nunca vai
 para o frontend.
 
-Para criar a chave (gratuita, sem cartão de crédito):
+Para criar a chave:
 
 1. Acesse https://aistudio.google.com/apikey e entre com uma conta Google.
 2. Aceite os termos de uso, se for o primeiro acesso.
@@ -121,8 +127,15 @@ sua chave, sem aspas e sem espaços:
 GEMINI_API_KEY=AIza...
 ```
 
-Opcionalmente, altere `GEMINI_MODEL` (padrão: `gemini-flash-latest`). Se o
+Opcionalmente, altere `GEMINI_MODEL` (padrão: `gemini-3.5-flash-lite`). Se o
 servidor já estiver rodando, reinicie-o para que ele leia o `.env` de novo.
+
+> **Plano gratuito do Gemini:** em 23/11/2026, os modelos `gemini-2.5-*`
+> respondiam `404` (não estão mais disponíveis para chaves novas) e os demais
+> modelos gratuitos respondiam `503` ("high demand") na maior parte das
+> tentativas. Com o faturamento ativado no projeto do Google AI Studio
+> (*Paid tier*), as gerações passaram a funcionar em poucos segundos; cada
+> roteiro custa uma fração de centavo com o `gemini-3.5-flash-lite`.
 
 > **Cuidado:** a chave é pessoal. Ela fica só no `.env`, que não vai para o
 > GitHub. Não coloque a chave no `.env.example`, no código ou em mensagens.
